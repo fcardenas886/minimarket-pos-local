@@ -128,4 +128,4 @@
 <script>
   window.CSRF_TOKEN = window.CSRF_TOKEN || document.querySelector('meta[name="csrf-token"]').content;
 </script>
-<script src="assets/js/cotizaciones.js?v=<?= APP_VERSION ?>"></script>
+<script src="<?= asset_url('assets/js/cotizaciones.js') ?>"></script>

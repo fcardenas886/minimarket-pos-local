@@ -13,7 +13,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $pass = trim($_POST['password'] ?? '');
     $rolID = (int)($_POST['rol_id'] ?? 3);
 
-    if (!empty($nombre) && !empty($username) && !empty($pass)) {
+    $cupo = licencia_usuarios_disponibles($pdo);
+    if (!$cupo['puede_agregar']) {
+        $error = "Tu plan " . licencia_estado()['plan_nombre'] . " permite {$cupo['max']} usuarios activos y ya tienes {$cupo['activos']}. Desactiva uno o cambia de plan.";
+    } elseif (!empty($nombre) && !empty($username) && !empty($pass)) {
         try {
             $stmt = $pdo->prepare("
                 INSERT INTO usuarios (Nombre, RutCuerpo, RutDv, NombreUsuario, PasswordHash, RolID, Activo)
@@ -22,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([
                 ':nombre' => $nombre,
                 ':username' => $username,
-                ':pass' => $pass, // En producción se usa password_hash($pass, PASSWORD_BCRYPT)
+                ':pass' => password_hash($pass, PASSWORD_DEFAULT),
                 ':rol' => $rolID
             ]);
             $message = 'Usuario creado exitosamente.';

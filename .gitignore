@@ -4,3 +4,10 @@ Thumbs.db
 .DS_Store
 .vscode/
 .idea/
+config/licencia.lic
+config/instalado.lock
+storage/boletas/
+config/clave_cifrado.key
+config/eboleta_sesion.json
+# Logos y archivos subidos por cada negocio (datos, no código)
+uploads/

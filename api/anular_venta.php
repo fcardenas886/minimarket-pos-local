@@ -26,21 +26,7 @@ try {
             exit;
         }
 
-        $stmtSup = $pdo->prepare("
-            SELECT u.UsuarioID, u.PasswordHash FROM usuarios u
-            JOIN roles r ON u.RolID = r.RolID
-            WHERE r.Nombre IN ('Administrador', 'Supervisor') AND u.Activo = TRUE
-        ");
-        $stmtSup->execute();
-        $supervisores = $stmtSup->fetchAll();
-
-        $autorizado = false;
-        foreach ($supervisores as $sup) {
-            if (password_verify($supervisorPass, $sup['PasswordHash']) || $supervisorPass === $sup['PasswordHash'] || $supervisorPass === 'Demo1234') {
-                $autorizado = true;
-                break;
-            }
-        }
+        $autorizado = verificarClaveSupervisor($pdo, (string)$supervisorPass) !== null;
 
         if (!$autorizado) {
             echo json_encode(['success' => false, 'error' => 'Clave de supervisor incorrecta.']);
@@ -77,7 +63,11 @@ try {
     $stmtUpdV->execute([':vid' => $ventaID]);
 
     // 2. Obtener detalles de la venta para devolver el stock
-    $stmtD = $pdo->prepare("SELECT ProductoID, Cantidad, PrecioUnitario FROM detalleventas WHERE VentaID = :vid");
+    $stmtD = $pdo->prepare("
+        SELECT dv.ProductoID, dv.Cantidad * GREATEST(dv.FactorConversion, 1) AS Cantidad, dv.PrecioUnitario, p.ControlaStock
+        FROM detalleventas dv JOIN productos p ON p.ProductoID = dv.ProductoID
+        WHERE dv.VentaID = :vid
+    ");
     $stmtD->execute([':vid' => $ventaID]);
     $detalles = $stmtD->fetchAll();
 
@@ -88,6 +78,7 @@ try {
     ");
 
     foreach ($detalles as $d) {
+        if (!$d['ControlaStock']) continue; // platos/servicios: no tienen stock que reponer
         $stmtKardex->execute([
             ':pid' => $d['ProductoID'],
             ':pid2' => $d['ProductoID'],
@@ -113,8 +104,21 @@ try {
         // Si no existe la tabla de auditoría, continuar
     }
 
+    // 4. Boleta electrónica: si aún no se emitía, se cancela; si ya se emitió, avisar.
+    $avisoBoleta = '';
+    $stBol = $pdo->prepare("SELECT EstadoSii, Folio FROM dte_emitidos WHERE VentaID = :vid AND TipoDocumento = 'Boleta' LIMIT 1");
+    $stBol->execute([':vid' => $ventaID]);
+    if ($bol = $stBol->fetch()) {
+        if ($bol['EstadoSii'] === 'Emitida' || $bol['EstadoSii'] === 'Aceptado') {
+            $avisoBoleta = " Ojo: la boleta electrónica N° {$bol['Folio']} ya fue emitida al SII; si corresponde, anúlala con una nota de crédito en el portal del SII.";
+        } else {
+            require_once __DIR__ . '/../includes/sii/EBoletaCola.php';
+            EBoletaCola::anularSiPendiente($pdo, $ventaID);
+        }
+    }
+
     $pdo->commit();
-    echo json_encode(['success' => true, 'mensaje' => "Venta #$ventaID anulada exitosamente y stock devuelto al inventario."]);
+    echo json_encode(['success' => true, 'mensaje' => "Venta #$ventaID anulada exitosamente y stock devuelto al inventario." . $avisoBoleta]);
 
 } catch (Exception $e) {
     if (isset($pdo) && $pdo->inTransaction()) {

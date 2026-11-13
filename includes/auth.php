@@ -4,6 +4,13 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/licencia.php';
+
+// Desde tablets/celulares de la red solo se permiten las pantallas de garzón y cocina.
+proteger_acceso_red();
+
+// Corta pantallas y APIs de módulos que el plan instalado no incluye.
+licencia_proteger_script_actual();
 
 function requireLogin() {
     if (empty($_SESSION['usuario'])) {
@@ -108,9 +115,23 @@ function loginRateLimitClear($ip) {
     loginAttemptsSave($data);
 }
 
-// Misma verificación que ya usa anular_venta.php para autorizar con clave de supervisor.
-// Devuelve el UsuarioID del supervisor cuya clave coincidió (para dejar registrado
-// quién autorizó realmente), o null si la clave no es válida.
+// Verifica la contraseña de un usuario. Acepta el hash (password_hash) y, solo para
+// usuarios antiguos guardados en texto plano, la clave tal cual; en ese caso la
+// convierte a hash en el momento, así que la clave en texto plano desaparece al primer uso.
+function verificarPasswordUsuario(PDO $pdo, int $usuarioID, string $hashGuardado, string $plainPass): bool {
+    if ($plainPass === '' || $hashGuardado === '') return false;
+    $esHash = password_get_info($hashGuardado)['algo'] !== null;
+    $valida = $esHash ? password_verify($plainPass, $hashGuardado) : hash_equals($hashGuardado, $plainPass);
+    if ($valida && (!$esHash || password_needs_rehash($hashGuardado, PASSWORD_DEFAULT))) {
+        $pdo->prepare("UPDATE usuarios SET PasswordHash = :h WHERE UsuarioID = :id")
+            ->execute([':h' => password_hash($plainPass, PASSWORD_DEFAULT), ':id' => $usuarioID]);
+    }
+    return $valida;
+}
+
+// Autoriza con la clave de un Supervisor o Administrador activo.
+// Devuelve el UsuarioID cuya clave coincidió (para dejar registrado quién autorizó),
+// o null si la clave no es válida.
 function verificarClaveSupervisor(PDO $pdo, string $plainPass): ?int {
     if (empty($plainPass)) return null;
     $stmt = $pdo->prepare("
@@ -120,7 +141,7 @@ function verificarClaveSupervisor(PDO $pdo, string $plainPass): ?int {
     ");
     $stmt->execute();
     foreach ($stmt->fetchAll() as $sup) {
-        if (password_verify($plainPass, $sup['PasswordHash']) || $plainPass === $sup['PasswordHash'] || $plainPass === 'Demo1234') {
+        if (verificarPasswordUsuario($pdo, (int)$sup['UsuarioID'], (string)$sup['PasswordHash'], $plainPass)) {
             return (int)$sup['UsuarioID'];
         }
     }

@@ -26,6 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stockMinimo = (float)($_POST['stock_minimo'] ?? 0);
         $activo = isset($_POST['activo']) ? 1 : 0;
         $esPesable = isset($_POST['es_pesable']) ? 1 : 0;
+        $controlaStock = isset($_POST['sin_stock']) ? 0 : 1;
         $codigoPLU = !empty($_POST['codigo_plu']) ? trim($_POST['codigo_plu']) : null;
 
         // Validar PLU si es pesable
@@ -42,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             SET CodigoBarras = :codigo, Nombre = :nombre, CategoriaID = :cat,
                                 PrecioVenta = :precio, CostoCompra = :costo,
                                 StockMinimo = :stockmin, Activo = :activo,
-                                EsPesable = :espesable, CodigoPLU = :plu
+                                EsPesable = :espesable, CodigoPLU = :plu, ControlaStock = :controla
                             WHERE ProductoID = :id
                         ");
                         $stmt->execute([
@@ -54,13 +55,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             ':stockmin' => $stockMinimo,
                             ':activo' => $activo,
                             ':espesable' => $esPesable,
+                            ':controla' => $controlaStock,
                             ':plu' => $codigoPLU,
                             ':id' => $id
                         ]);
                     } else {
                         $stmt = $pdo->prepare("
-                            INSERT INTO productos (CodigoBarras, Nombre, CategoriaID, PrecioVenta, CostoCompra, Stock, StockMinimo, Activo, EsPesable, CodigoPLU)
-                            VALUES (:codigo, :nombre, :cat, :precio, :costo, :stock, :stockmin, :activo, :espesable, :plu)
+                            INSERT INTO productos (CodigoBarras, Nombre, CategoriaID, PrecioVenta, CostoCompra, Stock, StockMinimo, Activo, EsPesable, CodigoPLU, ControlaStock)
+                            VALUES (:codigo, :nombre, :cat, :precio, :costo, :stock, :stockmin, :activo, :espesable, :plu, :controla)
                         ");
                         $stmt->execute([
                             ':codigo' => $codigo,
@@ -72,6 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             ':stockmin' => $stockMinimo,
                             ':activo' => $activo,
                             ':espesable' => $esPesable,
+                            ':controla' => $controlaStock,
                             ':plu' => $codigoPLU
                         ]);
                     }
@@ -86,20 +89,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Búsqueda
+// Búsqueda (por nombre, código principal, códigos alternativos o PLU)
 $search = trim($_GET['q'] ?? '');
-if (!empty($search)) {
-    $stmtP = $pdo->prepare("
-        SELECT p.*, c.Nombre AS Categoria 
+$filtro = ($_GET['filtro'] ?? '') === 'bajo_stock' ? 'bajo_stock' : '';
+if ($filtro === 'bajo_stock') {
+    $stmtP = $pdo->query("
+        SELECT p.*, c.Nombre AS Categoria,
+               (SELECT COUNT(*) FROM productoscodigos pc WHERE pc.ProductoID = p.ProductoID) AS TotalCodigosAlt
         FROM productos p
         LEFT JOIN categorias c ON p.CategoriaID = c.CategoriaID
-        WHERE p.Nombre LIKE :q OR p.CodigoBarras = :exact_q
+        WHERE p.Activo = TRUE AND p.ControlaStock = 1 AND p.Stock <= p.StockMinimo
+        ORDER BY p.Stock ASC, p.Nombre ASC
+    ");
+} elseif (!empty($search)) {
+    $stmtP = $pdo->prepare("
+        SELECT p.*, c.Nombre AS Categoria,
+               (SELECT COUNT(*) FROM productoscodigos pc WHERE pc.ProductoID = p.ProductoID) AS TotalCodigosAlt
+        FROM productos p
+        LEFT JOIN categorias c ON p.CategoriaID = c.CategoriaID
+        WHERE p.Nombre LIKE :q 
+           OR p.CodigoBarras = :exact_q 
+           OR p.CodigoPLU = :plu_q
+           OR EXISTS (SELECT 1 FROM productoscodigos pc WHERE pc.ProductoID = p.ProductoID AND pc.CodigoBarras = :exact_q2)
         ORDER BY p.Nombre ASC
     ");
-    $stmtP->execute([':q' => "%$search%", ':exact_q' => $search]);
+    $stmtP->execute([
+        ':q' => "%$search%",
+        ':exact_q' => $search,
+        ':plu_q' => $search,
+        ':exact_q2' => $search
+    ]);
 } else {
     $stmtP = $pdo->query("
-        SELECT p.*, c.Nombre AS Categoria 
+        SELECT p.*, c.Nombre AS Categoria,
+               (SELECT COUNT(*) FROM productoscodigos pc WHERE pc.ProductoID = p.ProductoID) AS TotalCodigosAlt
         FROM productos p
         LEFT JOIN categorias c ON p.CategoriaID = c.CategoriaID
         ORDER BY p.Nombre ASC LIMIT 100

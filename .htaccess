@@ -1,0 +1,7 @@
+# Bloquea archivos que nunca deben servirse por la web:
+# .env y demás archivos ocultos, SQL, Markdown, licencias, sesiones y respaldos.
+<FilesMatch "(^\.|\.(sql|md|lic|lock|json|log|bak|key|pem|stackdump|bat|py)$)">
+    Require all denied
+</FilesMatch>
+
+Options -Indexes

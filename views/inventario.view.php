@@ -99,4 +99,4 @@
   window.CSRF_TOKEN = window.CSRF_TOKEN || document.querySelector('meta[name="csrf-token"]').content;
   window.INVENTARIO_ID = <?= $inventarioID > 0 ? $inventarioID : 'null' ?>;
 </script>
-<script src="assets/js/inventario.js?v=<?= APP_VERSION ?>"></script>
+<script src="<?= asset_url('assets/js/inventario.js') ?>"></script>

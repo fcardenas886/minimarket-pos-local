@@ -19,7 +19,22 @@ if (empty($input['items']) || !is_array($input['items'])) {
 
 $tipoDocumento = $input['tipo_documento'] ?? 'Boleta';
 $clienteID = !empty($input['cliente_id']) ? (int)$input['cliente_id'] : null;
+
+// Funciones que el plan instalado no incluye se rechazan también aquí, no solo en la pantalla.
+if ($tipoDocumento === 'Factura' && !modulo_activo('factura')) {
+    echo json_encode(['success' => false, 'error' => 'La factura electrónica está disponible en la versión online del sistema.']);
+    exit;
+}
+if (!modulo_activo('clientes')) {
+    $clienteID = null;
+}
+if (!empty($input['vale_codigo']) && !modulo_activo('devoluciones')) {
+    echo json_encode(['success' => false, 'error' => 'Los vales de devolución están incluidos en el plan Comercio.']);
+    exit;
+}
 $cotizacionID = !empty($input['cotizacion_id']) ? (int)$input['cotizacion_id'] : null;
+// Módulo Mesas: la venta cobra la cuenta abierta de una mesa.
+$mesaPedidoID = (!empty($input['mesa_pedido_id']) && modulo_activo('mesas')) ? (int)$input['mesa_pedido_id'] : null;
 $descuentoGlobal = (int)($input['descuento_global'] ?? 0);
 $montoPagado = (int)($input['monto_pagado'] ?? 0);
 $vuelto = (int)($input['vuelto'] ?? 0);
@@ -56,12 +71,15 @@ try {
     foreach ($input['items'] as $item) {
         $pid = (int)$item['producto_id'];
         $cant = (float)$item['cantidad'];
+        $factor = isset($item['factor']) && (float)$item['factor'] > 0 ? (float)$item['factor'] : 1.0;
+        $nombreItem = !empty($item['nombre_item']) ? trim($item['nombre_item']) : null;
+        $unidadesFisicas = $cant * $factor;
 
         if ($pid <= 0 || $cant <= 0) {
             throw new Exception("Cantidad inválida para el producto ID $pid.");
         }
 
-        $stmtP = $pdo->prepare("SELECT ProductoID, Nombre, PrecioVenta, CostoCompra, Stock, EsAfecto FROM productos WHERE ProductoID = :pid FOR UPDATE");
+        $stmtP = $pdo->prepare("SELECT ProductoID, Nombre, PrecioVenta, CostoCompra, Stock, EsAfecto, ControlaStock FROM productos WHERE ProductoID = :pid FOR UPDATE");
         $stmtP->execute([':pid' => $pid]);
         $prod = $stmtP->fetch();
 
@@ -69,8 +87,8 @@ try {
             throw new Exception("El producto ID $pid no fue encontrado.");
         }
 
-        if (!$permitirStockNegativo && $prod['Stock'] < $cant) {
-            throw new Exception("Stock insuficiente para '{$prod['Nombre']}'. Disponible: {$prod['Stock']}");
+        if ($prod['ControlaStock'] && !$permitirStockNegativo && $prod['Stock'] < $unidadesFisicas) {
+            throw new Exception("Stock insuficiente para '{$prod['Nombre']}'. Disponible: {$prod['Stock']} unidades (requeridas: $unidadesFisicas).");
         }
 
         // Consultar promoción activa para este producto
@@ -81,12 +99,38 @@ try {
             LIMIT 1
         ");
         $stmtPromo->execute([':pid' => $pid]);
-        $promo = $stmtPromo->fetch();
+        $promo = modulo_activo('promociones') ? $stmtPromo->fetch() : false;
 
+        // Determinar precio unitario de esta presentación (pack vs individual)
         $precioUnitario = (int)$prod['PrecioVenta'];
+        if ($factor > 1) {
+            $stmtAlt = $pdo->prepare("SELECT PrecioVenta, Descripcion FROM productoscodigos WHERE ProductoID = :pid AND Cantidad = :factor LIMIT 1");
+            $stmtAlt->execute([':pid' => $pid, ':factor' => $factor]);
+            $altRow = $stmtAlt->fetch();
+
+            if ($altRow && $altRow['PrecioVenta'] !== null && (int)$altRow['PrecioVenta'] > 0) {
+                // 1. Regla: Precio fijo explícito configurado en el código alternativo
+                $precioUnitario = (int)$altRow['PrecioVenta'];
+            } elseif ($promo && $promo['Tipo'] === 'MULTIBUY' && (float)$promo['CantidadMinima'] > 0 && $factor >= (float)$promo['CantidadMinima'] && fmod($factor, (float)$promo['CantidadMinima']) == 0) {
+                // 2. Regla: Heredar automáticamente el precio de la promoción MULTIBUY activa
+                $precioUnitario = (int)round(($factor / (float)$promo['CantidadMinima']) * (int)$promo['PrecioOferta']);
+            } elseif ($promo && $promo['Tipo'] === 'DESCUENTO_UNIT' && (float)$promo['DescuentoPorcentaje'] > 0) {
+                // 2b. Regla: Heredar descuento porcentual unitario
+                $descUnit = (int)round((int)$prod['PrecioVenta'] * ((float)$promo['DescuentoPorcentaje'] / 100));
+                $precioUnitario = (int)round(((int)$prod['PrecioVenta'] - $descUnit) * $factor);
+            } elseif (!empty($item['precio_unitario']) && (int)$item['precio_unitario'] > 0) {
+                $precioUnitario = (int)$item['precio_unitario'];
+            } else {
+                // 3. Regla: Multiplicación base (sin oferta)
+                $precioUnitario = (int)round((int)$prod['PrecioVenta'] * $factor);
+            }
+        } elseif (!empty($item['precio_unitario']) && (int)$item['precio_unitario'] > 0) {
+            $precioUnitario = (int)$item['precio_unitario'];
+        }
+
         $descItem = 0;
 
-        if ($promo) {
+        if ($promo && $factor <= 1) {
             if ($promo['Tipo'] === 'DESCUENTO_UNIT') {
                 $descUnit = (int)round($precioUnitario * ((float)$promo['DescuentoPorcentaje'] / 100));
                 $descItem = (int)round($cant * $descUnit);
@@ -109,8 +153,10 @@ try {
         $itemsProcesados[] = [
             'prod' => $prod,
             'cant' => $cant,
+            'factor' => $factor,
+            'nombre_item' => $nombreItem,
             'precio' => $precioUnitario,
-            'costo' => (int)($prod['CostoCompra'] ?? 0),
+            'costo' => (int)round(($prod['CostoCompra'] ?? 0) * $factor),
             'descuento' => $descItem,
             'subtotal' => $subtotalItem
         ];
@@ -160,32 +206,32 @@ try {
         $valeAplicado = min((int)$vale['MontoDisponible'], $montoTotal);
     }
 
-    // Descuentos globales grandes requieren autorización de un Administrador/Supervisor,
-    // igual que la anulación de ventas. Los descuentos por promoción no cuentan aquí:
-    // ya fueron pre-aprobados por un Admin/Supervisor al crear la promoción, así que
-    // exigir clave de nuevo en cada venta con promo sería fricción sin sentido.
+    // Descuentos manuales configurables según porcentaje permitido para cajeros
     $descuentoTotal = $descuentoGlobal;
     if ($user['rol'] === 'Cajero' && $descuentoTotal > 0) {
-        $umbralDescuento = max(1000, (int)round($subtotalBruto * 0.10));
-        if ($descuentoTotal > $umbralDescuento) {
-            $supervisorPass = trim($input['supervisor_pass'] ?? '');
+        // Cargar porcentaje máximo de descuento permitido sin clave de supervisor
+        $stmtCfgPorc = $pdo->prepare("SELECT Valor FROM configuraciones WHERE Clave = 'POS_DESCUENTO_MAX_PORC'");
+        $stmtCfgPorc->execute();
+        $cfgVal = $stmtCfgPorc->fetchColumn();
+        $maxPorcPermitido = ($cfgVal !== false) ? (float)$cfgVal : 5.0;
+
+        $porcEfectivo = $subtotalBruto > 0 ? ($descuentoTotal / $subtotalBruto) * 100 : 0;
+
+        // Si supera el porcentaje configurado o si es 0 (exigir siempre supervisor)
+        if ($porcEfectivo > $maxPorcPermitido || $maxPorcPermitido <= 0) {
+            $supervisorPass = modulo_activo('supervisor') ? trim($input['supervisor_pass'] ?? '') : '';
+            if (empty($supervisorPass) && !modulo_activo('supervisor')) {
+                $maxFmt = number_format($maxPorcPermitido, 1, ',', '.');
+                throw new Exception("El descuento supera el máximo permitido para cajeros ($maxFmt%). Solo un administrador puede aplicarlo.");
+            }
             if (empty($supervisorPass)) {
-                throw new Exception("El descuento aplicado (" . formatCLP($descuentoTotal) . ") requiere la clave de un Administrador o Supervisor.");
+                $porcFmt = number_format($porcEfectivo, 1, ',', '.');
+                $maxFmt = number_format($maxPorcPermitido, 1, ',', '.');
+                throw new Exception("El descuento aplicado ($porcFmt%) supera el límite permitido sin supervisión ($maxFmt%). Requiere clave de Administrador o Supervisor.");
             }
-            $stmtSup = $pdo->prepare("
-                SELECT u.PasswordHash FROM usuarios u
-                JOIN roles r ON u.RolID = r.RolID
-                WHERE r.Nombre IN ('Administrador', 'Supervisor') AND u.Activo = TRUE
-            ");
-            $stmtSup->execute();
-            $autorizado = false;
-            foreach ($stmtSup->fetchAll() as $sup) {
-                if (password_verify($supervisorPass, $sup['PasswordHash']) || $supervisorPass === $sup['PasswordHash'] || $supervisorPass === 'Demo1234') {
-                    $autorizado = true;
-                    break;
-                }
-            }
-            if (!$autorizado) {
+
+            $supId = verificarClaveSupervisor($pdo, $supervisorPass);
+            if (!$supId) {
                 throw new Exception("Clave de supervisor incorrecta para autorizar el descuento.");
             }
         }
@@ -242,25 +288,29 @@ try {
 
     // 3. Insertar DetalleVentas, Actualizar Stock y Kardex
     $stmtDetalle = $pdo->prepare("
-        INSERT INTO detalleventas (VentaID, ProductoID, Cantidad, PrecioUnitario, CostoUnitario, Descuento, EsAfecto, Subtotal)
-        VALUES (:vid, :pid, :cant, :precio, :costo, :desc, :afecto, :subtotal)
+        INSERT INTO detalleventas (VentaID, ProductoID, NombreItem, Cantidad, FactorConversion, PrecioUnitario, CostoUnitario, Descuento, EsAfecto, Subtotal)
+        VALUES (:vid, :pid, :nombre_item, :cant, :factor, :precio, :costo, :desc, :afecto, :subtotal)
     ");
     
-    $stmtUpdStock = $pdo->prepare("UPDATE productos SET Stock = Stock - :cant WHERE ProductoID = :pid");
+    $stmtUpdStock = $pdo->prepare("UPDATE productos SET Stock = Stock - :cant_fisica WHERE ProductoID = :pid");
     
     $stmtKardex = $pdo->prepare("
         INSERT INTO kardex (ProductoID, TipoTransaccion, VentaID, CantidadSalida, StockSaldo, ValorUnitario)
-        VALUES (:pid, 'VENTA', :vid, :cant, :saldo, :val)
+        VALUES (:pid, 'VENTA', :vid, :cant_fisica, :saldo, :val)
     ");
 
     foreach ($itemsProcesados as $item) {
         $p = $item['prod'];
         $cant = $item['cant'];
+        $factor = $item['factor'];
+        $unidadesFisicas = $cant * $factor;
         
         $stmtDetalle->execute([
             ':vid' => $ventaID,
             ':pid' => $p['ProductoID'],
+            ':nombre_item' => $item['nombre_item'],
             ':cant' => $cant,
+            ':factor' => $factor,
             ':precio' => $item['precio'],
             ':costo' => $item['costo'],
             ':desc' => $item['descuento'],
@@ -268,13 +318,16 @@ try {
             ':subtotal' => $item['subtotal']
         ]);
 
-        $stmtUpdStock->execute([':cant' => $cant, ':pid' => $p['ProductoID']]);
+        // Platos preparados, servicios, etc.: no descuentan inventario ni van al kardex.
+        if (!$p['ControlaStock']) continue;
 
-        $nuevoStock = $p['Stock'] - $cant;
+        $stmtUpdStock->execute([':cant_fisica' => $unidadesFisicas, ':pid' => $p['ProductoID']]);
+
+        $nuevoStock = $p['Stock'] - $unidadesFisicas;
         $stmtKardex->execute([
             ':pid' => $p['ProductoID'],
             ':vid' => $ventaID,
-            ':cant' => $cant,
+            ':cant_fisica' => $unidadesFisicas,
             ':saldo' => $nuevoStock,
             ':val' => $item['precio']
         ]);
@@ -364,6 +417,18 @@ try {
         $stmtAddPts->execute([':pts' => $puntosGanados, ':cid' => $clienteID]);
     }
 
+    // Cerrar la cuenta de la mesa con esta venta (si ya estaba cerrada, se anula todo: evita cobrar dos veces).
+    if ($mesaPedidoID) {
+        $stCerrar = $pdo->prepare("
+            UPDATE mesapedidos SET Estado = 'Cobrada', VentaID = :v, FechaCierre = NOW()
+            WHERE PedidoID = :p AND Estado = 'Abierta'
+        ");
+        $stCerrar->execute([':v' => $ventaID, ':p' => $mesaPedidoID]);
+        if ($stCerrar->rowCount() === 0) {
+            throw new Exception('La cuenta de esta mesa ya fue cobrada o anulada. Revisa en Mesas antes de cobrar de nuevo.');
+        }
+    }
+
     // Si la venta salió de una cotización, marcarla como convertida
     if ($cotizacionID) {
         $pdo->prepare("
@@ -378,7 +443,23 @@ try {
     $dteResponse = null;
     try {
         $provider = $pdo->query("SELECT Valor FROM configuraciones WHERE Clave = 'DTE_PROVEEDOR'")->fetchColumn();
-        if ($provider && $provider !== 'ninguno') {
+        if (in_array($provider, ['eboleta', 'eboleta_simulador'], true)) {
+            // e-Boleta: la venta ya quedó guardada; la boleta entra a la cola y se intenta
+            // emitir ahora con un límite de tiempo. Si no hay internet queda Pendiente y
+            // scripts/emitir_pendientes.php la envía después.
+            if ($tipoDocumento === 'Boleta') {
+                require_once __DIR__ . '/../includes/sii/EBoletaCola.php';
+                $dteID = EBoletaCola::encolarVenta($pdo, (int)$ventaID);
+                $r = EBoletaCola::procesar($pdo, $dteID, 12);
+                $dteResponse = [
+                    'success' => $r['estado'] === 'Emitida',
+                    'estado' => $r['estado'],
+                    'folio' => $r['folio'],
+                    'pdf_url' => $r['pdf_url'],
+                    'error' => $r['error'],
+                ];
+            }
+        } elseif ($provider && $provider !== 'ninguno') {
             require_once __DIR__ . '/../includes/sii/SiiFacturacion.php';
             $dteResponse = SiiFacturacion::emitirDesdeVenta($ventaID);
         }

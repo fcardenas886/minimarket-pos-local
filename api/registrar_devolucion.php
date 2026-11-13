@@ -123,6 +123,7 @@ try {
         SELECT :pid, 'DEVOLUCION_VENTA', :did, :cant, Stock, :val FROM productos WHERE ProductoID = :pid2
     ");
 
+    $stmtControla = $pdo->prepare("SELECT ControlaStock FROM productos WHERE ProductoID = :pid");
     foreach ($itemsProcesados as $item) {
         $stmtDDev->execute([
             ':did' => $devolucionID,
@@ -130,6 +131,8 @@ try {
             ':cant' => $item['cantidad'],
             ':monto' => $item['monto']
         ]);
+        $stmtControla->execute([':pid' => $item['producto_id']]);
+        if (!(int)$stmtControla->fetchColumn()) continue; // platos/servicios: sin stock que reponer
         $stmtUpdStock->execute([':cant' => $item['cantidad'], ':pid' => $item['producto_id']]);
         $stmtK->execute([
             ':pid' => $item['producto_id'],
