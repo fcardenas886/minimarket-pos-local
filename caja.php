@@ -137,6 +137,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $reporteCierre['ventas_tarjeta'] = (int)$totales['total_tarjeta'];
                 $reporteCierre['ventas_transferencia'] = (int)$totales['total_transferencia'];
                 $reporteCierre['ventas_vales'] = (int)$totales['total_vales'];
+                // Propinas voluntarias del turno: ya están dentro de los montos cobrados (por eso el
+                // arqueo cuadra); se informan aparte porque corresponden al personal, no al negocio.
+                $stProp = $pdo->prepare("SELECT COALESCE(SUM(Propina), 0) FROM ventas WHERE TurnoID = :t AND Estado = 'Completada'");
+                $stProp->execute([':t' => $reporteCierre['TurnoID']]);
+                $reporteCierre['propinas'] = (int)$stProp->fetchColumn();
                 $reporteCierre['ingresos_manuales'] = (int)$movs['total_ingresos'];
                 $reporteCierre['retiros_manuales'] = (int)$movs['total_retiros'];
                 $reporteCierre['efectivo_esperado'] = $efectivoEsperado;

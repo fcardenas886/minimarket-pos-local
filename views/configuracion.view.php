@@ -160,6 +160,23 @@
         <input type="text" name="config[TICKET_PIE_PAGINA]" value="<?= htmlspecialchars($config['TICKET_PIE_PAGINA'] ?? '¡Gracias por su preferencia!') ?>" class="form-control">
       </div>
 
+      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;">
+        <div>
+          <label style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">PROPINA VOLUNTARIA EN CAJA</label>
+          <select name="config[PROPINA_ACTIVA]" class="form-control">
+            <option value="NO" <?= ($config['PROPINA_ACTIVA'] ?? 'NO') !== 'SI' ? 'selected' : '' ?>>No ofrecer propina</option>
+            <option value="SI" <?= ($config['PROPINA_ACTIVA'] ?? '') === 'SI' ? 'selected' : '' ?>>Ofrecer propina al cobrar (restaurant, picada, café)</option>
+          </select>
+          <p style="color: var(--text-muted); font-size: 0.75rem; margin-top: 0.25rem;">
+            La propina es voluntaria: se sugiere y el cliente puede dar menos o nada. No va en la boleta ni lleva IVA.
+          </p>
+        </div>
+        <div>
+          <label style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">% SUGERIDO</label>
+          <input type="number" name="config[PROPINA_PORCENTAJE]" min="1" max="30" step="1" value="<?= htmlspecialchars($config['PROPINA_PORCENTAJE'] ?? '10') ?>" class="form-control">
+        </div>
+      </div>
+
       <h2 style="font-size: 1.1rem; font-weight: 600; color: #818cf8; border-bottom: 1px solid var(--border-dark); padding-bottom: 0.4rem; margin-top: 0.5rem;">Módulos y Reglas del Sistema</h2>
 
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">

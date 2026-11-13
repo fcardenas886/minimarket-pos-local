@@ -50,6 +50,12 @@ if (!modulo_activo('supervisor')) {
     $configSupervision['POS_REQ_SUPERVISOR_ELIMINAR_ITEM'] = 'NO';
 }
 
+// Propina voluntaria (se sugiere un %, el cliente decide)
+$cfgPropina = [];
+foreach ($pdo->query("SELECT Clave, Valor FROM configuraciones WHERE Clave IN ('PROPINA_ACTIVA', 'PROPINA_PORCENTAJE')") as $r) $cfgPropina[$r['Clave']] = $r['Valor'];
+$propinaActiva = ($cfgPropina['PROPINA_ACTIVA'] ?? 'NO') === 'SI';
+$propinaPorcentaje = max(1, min(30, (int)($cfgPropina['PROPINA_PORCENTAJE'] ?? 10)));
+
 // Módulo Mesas: imprimir en caja cada comanda nueva de los garzones
 $mesasImprimirComanda = (string)($pdo->query("SELECT Valor FROM configuraciones WHERE Clave = 'MESAS_IMPRIMIR_COMANDA'")->fetchColumn() ?: 'SI');
 

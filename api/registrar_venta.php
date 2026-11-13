@@ -237,14 +237,30 @@ try {
         }
     }
 
-    // Los pagos declarados deben cubrir el monto restante (Total - Vale)
+    // Propina voluntaria: se cobra junto con la venta pero NO es parte de ella (no lleva IVA ni va
+    // en la boleta). Solo si está activada, nunca a crédito/puntos, y con un tope contra errores de tipeo.
+    $propina = max(0, (int)($input['propina'] ?? 0));
+    if ($propina > 0) {
+        $propinaActiva = $pdo->query("SELECT Valor FROM configuraciones WHERE Clave = 'PROPINA_ACTIVA'")->fetchColumn() === 'SI';
+        if (!$propinaActiva) throw new Exception('La propina no está activada en Configuración.');
+        foreach ($pagosList as $pago) {
+            if (in_array($pago['metodo'] ?? '', ['Credito', 'Fiado', 'Credito Interno', 'Puntos'], true)) {
+                throw new Exception('La propina no se puede dejar a crédito ni pagar con puntos.');
+            }
+        }
+        if ($propina > max(0, $subtotalBruto - $descuentoGlobal)) {
+            throw new Exception('La propina (' . formatCLP($propina) . ') no puede superar el consumo. Revisa el monto.');
+        }
+    }
+
+    // Los pagos declarados deben cubrir el monto restante (Total - Vale) más la propina.
     $montoRestante = max(0, $montoTotal - $valeAplicado);
     $sumaPagos = 0;
     foreach ($pagosList as $pago) {
         $sumaPagos += (int)(($pago['monto'] ?? 0) > 0 ? $pago['monto'] : $montoRestante);
     }
-    if (($sumaPagos + $valeAplicado) < $montoTotal) {
-        throw new Exception("Los pagos declarados (" . formatCLP($sumaPagos + $valeAplicado) . ") no cubren el total de la venta (" . formatCLP($montoTotal) . ").");
+    if (($sumaPagos + $valeAplicado) < $montoTotal + $propina) {
+        throw new Exception("Los pagos declarados (" . formatCLP($sumaPagos + $valeAplicado) . ") no cubren el total a cobrar (" . formatCLP($montoTotal + $propina) . ($propina ? ', con propina' : '') . ").");
     }
 
     // Calcular IVA (19%)
@@ -256,8 +272,8 @@ try {
 
     // 2. Insertar Venta
     $stmtVenta = $pdo->prepare("
-        INSERT INTO ventas (TurnoID, ClienteID, TipoDocumento, MontoNeto, MontoIva, DescuentoGlobal, MontoTotal, MontoPagado, Vuelto, PuntosGanados, Estado)
-        VALUES (:turno, :cliente, :tipo, :neto, :iva, :desc, :total, :pagado, :vuelto, :puntos, 'Completada')
+        INSERT INTO ventas (TurnoID, ClienteID, TipoDocumento, MontoNeto, MontoIva, DescuentoGlobal, MontoTotal, Propina, MontoPagado, Vuelto, PuntosGanados, Estado)
+        VALUES (:turno, :cliente, :tipo, :neto, :iva, :desc, :total, :propina, :pagado, :vuelto, :puntos, 'Completada')
     ");
     $stmtVenta->execute([
         ':turno' => $turnoID,
@@ -267,7 +283,8 @@ try {
         ':iva' => $montoIva,
         ':desc' => $descuentoGlobal,
         ':total' => $montoTotal,
-        ':pagado' => $montoPagado > 0 ? $montoPagado : $montoTotal,
+        ':propina' => $propina,
+        ':pagado' => $montoPagado > 0 ? $montoPagado : $montoTotal + $propina,
         ':vuelto' => $vuelto,
         ':puntos' => $puntosGanados
     ]);
@@ -494,6 +511,7 @@ try {
         'total' => $montoTotal,
         'vuelto' => $vuelto,
         'puntos_ganados' => $puntosGanados,
+        'propina' => $propina,
         'fecha' => date('d/m/Y H:i:s')
     ];
 

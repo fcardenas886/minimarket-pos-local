@@ -1,6 +1,6 @@
 -- Esquema limpio de Minimarket POS Local (solo estructura, sin datos).
--- Generado desde la base de desarrollo; lo usa instalar.php / configurar.php en equipos nuevos.
--- Incluye todas las migraciones de db/migrations hasta la 0012.
+-- Generado desde la base de desarrollo; lo usa configurar.php en equipos nuevos.
+-- Incluye todas las migraciones de db/migrations hasta la 0013.
 
 SET FOREIGN_KEY_CHECKS = 0;
 
@@ -672,6 +672,7 @@ CREATE TABLE `ventas` (
   `MontoExento` int NOT NULL DEFAULT '0',
   `DescuentoGlobal` int NOT NULL DEFAULT '0',
   `MontoTotal` int NOT NULL DEFAULT '0',
+  `Propina` int NOT NULL DEFAULT '0',
   `MontoPagado` int NOT NULL DEFAULT '0',
   `Vuelto` int NOT NULL DEFAULT '0',
   `PuntosGanados` int NOT NULL DEFAULT '0',

@@ -1,11 +1,17 @@
 <?php
 // Version de la app: unica fuente de verdad, para que login y footer nunca queden desincronizados.
 // El instalador (instalador/compilar.php) toma la versión de aquí: no se escribe en otro lado.
-define('APP_VERSION', 'v4.0.0');
+define('APP_VERSION', 'v4.1.0');
 
 // Novedades reales por versión, para la pantalla de bienvenida y el módulo "Acerca de".
 // Registra la cronología completa de la evolución del sistema desde su inicio.
 define('APP_CHANGELOG', [
+    'v4.1.0' => [
+        'Propina voluntaria al cobrar: se sugiere un porcentaje (10% por defecto) y el cliente puede dar menos o nada. No va en la boleta ni lleva IVA, y aparece aparte en el comprobante y en el cierre de caja.',
+        'Al cobrar una mesa se propone la propina sugerida; en venta directa parte sin propina.',
+        'Comprobante de venta: botón "Nueva venta", cierre con la tecla Esc o la X, y los botones ya no quedan fuera de la pantalla en tickets largos.',
+        'Mesas y garzones: dirección de conexión correcta en equipos con varias tarjetas de red, códigos QR y pantallas instalables como app en celulares y tablets.',
+    ],
     'v4.0.0' => [
         'Edición local con planes Básico y Comercio: licencia de por vida ligada al RUT del negocio, con actualizaciones incluidas por un período.',
         'Boleta electrónica integrada con e-Boleta del SII: se emite al cobrar y, si no hay internet, queda en cola y se envía sola al volver la conexión.',

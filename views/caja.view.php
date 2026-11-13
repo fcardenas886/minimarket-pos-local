@@ -75,7 +75,13 @@
             <span>Vales Canjeados (Nota Crédito):</span>
             <strong><?= formatCLP($reporteCierre['ventas_vales'] ?? 0) ?></strong>
           </div>
-          
+          <?php if (!empty($reporteCierre['propinas'])): ?>
+          <div style="display: flex; justify-content: space-between; padding-top: 0.4rem; color: #f59e0b;" title="Ya están incluidas en efectivo, tarjeta y transferencia; corresponden al personal.">
+            <span><i class="fa-solid fa-hand-holding-heart"></i> Propinas del turno (para el personal):</span>
+            <strong><?= formatCLP($reporteCierre['propinas']) ?></strong>
+          </div>
+          <?php endif; ?>
+
           <div style="display: flex; justify-content: space-between; border-top: 1px dashed var(--border-dark); padding-top: 0.5rem; margin-top: 0.5rem; font-size: 1.15rem; font-weight: bold; color: #fff;">
             <span>Diferencia Neta Global:</span>
             <?php if ($reporteCierre['diferencia_neta'] == 0): ?>

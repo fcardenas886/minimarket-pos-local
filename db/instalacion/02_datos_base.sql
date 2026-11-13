@@ -88,4 +88,9 @@ INSERT INTO `configuraciones` (`Clave`, `Valor`, `Descripcion`) VALUES
 INSERT INTO `roles` (`RolID`, `Nombre`, `Descripcion`, `Activo`) VALUES (4, 'Garzón', 'Toma pedidos de mesas desde tablet o celular con PIN', 1);
 INSERT INTO `configuraciones` (`Clave`, `Valor`, `Descripcion`) VALUES ('MESAS_IMPRIMIR_COMANDA', 'SI', 'Imprimir automáticamente en caja cada comanda nueva de los garzones');
 
+-- Propina voluntaria (desactivada por defecto)
+INSERT INTO `configuraciones` (`Clave`, `Valor`, `Descripcion`) VALUES
+  ('PROPINA_ACTIVA', 'NO', 'Ofrecer propina voluntaria en la pantalla de pago'),
+  ('PROPINA_PORCENTAJE', '10', 'Porcentaje de propina sugerida');
+
 SET FOREIGN_KEY_CHECKS = 1;

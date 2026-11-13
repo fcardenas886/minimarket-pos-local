@@ -964,7 +964,20 @@ body {
   color: #000;
   padding: 1.25rem;
   overflow-y: auto;
+  /* Sin min-height: 0 el papel no se achica en un ticket largo y empuja los botones
+     (Cerrar, Nueva venta) fuera de la tarjeta, sin forma de salir. */
+  flex: 1 1 auto;
+  min-height: 0;
 }
+
+.ticket-modal__card { position: relative; }
+.ticket-cerrar-x {
+  position: absolute; top: 6px; right: 6px; z-index: 2;
+  width: 32px; height: 32px; border-radius: 50%; border: 0;
+  background: rgba(0, 0, 0, 0.08); color: #111; font-size: 1.05rem; cursor: pointer;
+}
+.ticket-cerrar-x:hover { background: rgba(0, 0, 0, 0.16); }
+.ticket-modal__actions .btn-nueva-venta { flex-basis: 100%; font-size: 0.95rem; padding: 0.65rem; font-weight: 700; }
 
 .tk-center { text-align: center; }
 .tk-strong { font-weight: bold; }

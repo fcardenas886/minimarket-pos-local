@@ -5,6 +5,57 @@ let metodoSeleccionadoModal = 'Efectivo';
 let valeAplicado = null; // { codigo, disponible }
 let cotizacionActiva = null; // CotizacionID si la venta actual salió de una cotización
 let mesaPedidoActivo = null; // { id, mesa } si se está cobrando la cuenta de una mesa (módulo Mesas)
+let propinaModo = '0';       // '0' | 'sugerida' | 'otro' (propina voluntaria, si está activa)
+
+// ---------------------------------------------------------------- Propina voluntaria
+// No forma parte de la venta: la boleta y el total de la venta no cambian; el cliente
+// paga venta + propina, y la propina se guarda aparte para el cierre de caja.
+function getPropinaBase() {
+  const descGlobal = parseInt(document.getElementById('descuentoGlobal').value) || 0;
+  return Math.max(0, getCartSubtotal() - descGlobal);
+}
+function getPropina() {
+  if (!window.PROPINA_ACTIVA) return 0;
+  if (['Credito', 'Puntos'].includes(metodoSeleccionadoModal)) return 0;
+  if (propinaModo === 'sugerida') return Math.round(getPropinaBase() * (window.PROPINA_PORCENTAJE || 10) / 100 / 10) * 10;
+  if (propinaModo === 'otro') return Math.max(0, parseInt(document.getElementById('propinaOtroInput')?.value) || 0);
+  return 0;
+}
+function setPropinaModo(modo) {
+  propinaModo = modo;
+  const otro = document.getElementById('propinaOtroInput');
+  if (otro && modo !== 'otro') otro.value = '';
+  if (['Credito', 'Puntos'].includes(metodoSeleccionadoModal) && modo !== '0') {
+    toast('La propina no se puede dejar a crédito ni con puntos.', 'warn');
+    propinaModo = '0';
+  }
+  actualizarTotalesPago();
+  const montoInput = document.getElementById('montoRecibidoModal');
+  if (montoInput) montoInput.value = getCartTotal() + getPropina();
+  calcularVueltoModal();
+}
+function actualizarTotalesPago() {
+  const total = getCartTotal();
+  const propina = getPropina();
+  document.getElementById('modalMontoTotal').textContent = `$${formatNumber(total + propina)}`;
+  const desglose = document.getElementById('modalDesglosePropina');
+  if (desglose) {
+    desglose.style.display = propina > 0 ? 'block' : 'none';
+    desglose.textContent = `Venta $${formatNumber(total)} + propina $${formatNumber(propina)}`;
+  }
+  document.querySelectorAll('.btn-propina').forEach(b => {
+    const activo = b.dataset.modo === propinaModo;
+    b.classList.toggle('btn-primary', activo);
+    b.classList.toggle('btn-secondary', !activo);
+  });
+  const sug = document.getElementById('btnPropinaSugerida');
+  if (sug) {
+    const monto = Math.round(getPropinaBase() * (window.PROPINA_PORCENTAJE || 10) / 100 / 10) * 10;
+    sug.textContent = `${window.PROPINA_PORCENTAJE}% sugerida ($${formatNumber(monto)})`;
+  }
+  const otro = document.getElementById('propinaOtroInput');
+  if (otro) otro.style.borderColor = propinaModo === 'otro' ? 'var(--primary)' : '';
+}
 
 function playBeep() {
   try {
@@ -935,7 +986,7 @@ function renderCart() {
   // así que si se editan con el modal abierto hay que refrescar el total y el vuelto ahí también.
   const pagoModalEl = document.getElementById('pagoModal');
   if (pagoModalEl && pagoModalEl.style.display === 'flex') {
-    document.getElementById('modalMontoTotal').textContent = `$${formatNumber(totalFinal)}`;
+    actualizarTotalesPago();
     calcularVueltoModal();
   }
 
@@ -1028,9 +1079,13 @@ function abrirModalPago() {
     return;
   }
 
-  const total = getCartTotal();
-  document.getElementById('modalMontoTotal').textContent = `$${formatNumber(total)}`;
-  document.getElementById('montoRecibidoModal').value = total;
+  // Al cobrar una mesa se propone la propina sugerida; en venta directa, sin propina.
+  // En ambos casos el cajero la cambia si el cliente quiere dar menos o nada.
+  propinaModo = (window.PROPINA_ACTIVA && mesaPedidoActivo) ? 'sugerida' : '0';
+  const otroPropina = document.getElementById('propinaOtroInput');
+  if (otroPropina) otroPropina.value = '';
+  actualizarTotalesPago();
+  document.getElementById('montoRecibidoModal').value = getCartTotal() + getPropina();
   calcularVueltoModal();
 
   const modal = document.getElementById('pagoModal');
@@ -1054,10 +1109,15 @@ function setFormaPago(metodo, btn) {
   if (pnlEfec) pnlEfec.style.display = metodo === 'Efectivo' ? 'block' : 'none';
   if (pnlMix) pnlMix.style.display = metodo === 'Mixto' ? 'block' : 'none';
   if (pnlVale) pnlVale.style.display = metodo === 'Vale' ? 'block' : 'none';
+
+  // La propina no aplica a crédito/puntos: se oculta y se recalcula el total.
+  const bloqueProp = document.getElementById('bloquePropina');
+  if (bloqueProp) bloqueProp.style.opacity = ['Credito', 'Puntos'].includes(metodo) ? '0.4' : '';
+  if (window.PROPINA_ACTIVA) { actualizarTotalesPago(); calcularVueltoModal(); }
 }
 
 function setMontoQuick(val) {
-  const total = getCartTotal();
+  const total = getCartTotal() + getPropina();
   const input = document.getElementById('montoRecibidoModal');
   if (val === 'exacto') {
     input.value = total;
@@ -1068,7 +1128,7 @@ function setMontoQuick(val) {
 }
 
 function calcularVueltoModal() {
-  const total = getCartTotal();
+  const total = getCartTotal() + getPropina();
   const recibido = parseInt(document.getElementById('montoRecibidoModal').value) || 0;
   const vueltoEl = document.getElementById('vueltoModal');
 
@@ -1130,25 +1190,28 @@ async function confirmarPagoModal() {
   }
 
   let pagos = [];
-  let recibido = total;
+  // Propina voluntaria: se cobra junto con la venta pero no forma parte de ella (ni de la boleta).
+  const propina = getPropina();
+  const totalCobrar = total + propina;
+  let recibido = totalCobrar;
   let vuelto = 0;
 
   if (metodoSeleccionadoModal === 'Efectivo') {
-    recibido = parseInt(document.getElementById('montoRecibidoModal').value) || total;
-    if (recibido < total) {
-      toast(`El monto recibido ($${formatNumber(recibido)}) es menor al total ($${formatNumber(total)}).`, 'warn');
+    recibido = parseInt(document.getElementById('montoRecibidoModal').value) || totalCobrar;
+    if (recibido < totalCobrar) {
+      toast(`El monto recibido ($${formatNumber(recibido)}) es menor al total a cobrar ($${formatNumber(totalCobrar)}).`, 'warn');
       return;
     }
-    vuelto = Math.max(0, recibido - total);
-    pagos.push({ metodo: 'Efectivo', monto: total });
+    vuelto = Math.max(0, recibido - totalCobrar);
+    pagos.push({ metodo: 'Efectivo', monto: totalCobrar });
   } else if (metodoSeleccionadoModal === 'Mixto') {
     const efec = parseInt(document.getElementById('mixtoEfectivo').value) || 0;
     const tarj = parseInt(document.getElementById('mixtoTarjeta').value) || 0;
     const transf = parseInt(document.getElementById('mixtoTransf').value) || 0;
     const sumaMixto = efec + tarj + transf;
 
-    if (sumaMixto < total) {
-      toast(`La suma del pago mixto ($${formatNumber(sumaMixto)}) no cubre el total de la venta ($${formatNumber(total)}).`, 'warn');
+    if (sumaMixto < totalCobrar) {
+      toast(`La suma del pago mixto ($${formatNumber(sumaMixto)}) no cubre el total a cobrar ($${formatNumber(totalCobrar)}${propina ? ', con propina' : ''}).`, 'warn');
       return;
     }
 
@@ -1161,9 +1224,9 @@ async function confirmarPagoModal() {
       return;
     }
     const metodoDb = metodoSeleccionadoModal === 'Credito' ? 'Credito Interno' : 'Puntos';
-    pagos.push({ metodo: metodoDb, monto: total });
+    pagos.push({ metodo: metodoDb, monto: total }); // sin propina: getPropina() ya es 0 aquí
   } else {
-    pagos.push({ metodo: metodoSeleccionadoModal, monto: total });
+    pagos.push({ metodo: metodoSeleccionadoModal, monto: totalCobrar });
   }
 
   const btn = document.getElementById('btnConfirmarPagoModal');
@@ -1190,6 +1253,7 @@ async function confirmarPagoModal() {
         vale_codigo: valeAplicado ? valeAplicado.codigo : null,
         cotizacion_id: cotizacionActiva,
         mesa_pedido_id: mesaPedidoActivo ? mesaPedidoActivo.id : null,
+        propina: propina,
         pagos: pagos,
         monto_pagado: recibido,
         vuelto: vuelto
@@ -1425,6 +1489,15 @@ function mostrarTicket(data, items, total, pagado, vuelto, pagos, meta) {
   }
   document.getElementById('ticketTotal').textContent = `$${formatNumber(total)}`;
 
+  // Propina: fuera del total de la venta (no va en la boleta), pero sí en lo pagado.
+  const propinaTk = parseInt(data.propina) || 0;
+  const boxPropina = document.getElementById('ticketPropinaBox');
+  if (boxPropina) {
+    boxPropina.style.display = propinaTk > 0 ? 'block' : 'none';
+    document.getElementById('ticketPropina').textContent = `$${formatNumber(propinaTk)}`;
+    document.getElementById('ticketTotalPagado').textContent = `$${formatNumber(total + propinaTk)}`;
+  }
+
   const pagosEl = document.getElementById('ticketPagos');
   const listaPagos = (pagos && pagos.length)
     ? pagos
@@ -1545,6 +1618,18 @@ function cerrarTicket() {
   document.getElementById('ticketModal').style.display = 'none';
   document.getElementById('posSearch').focus();
 }
+
+// Esc o un clic fuera del comprobante lo cierra y deja la caja lista para la siguiente venta.
+document.addEventListener('keydown', (e) => {
+  const modal = document.getElementById('ticketModal');
+  if (e.key === 'Escape' && modal && modal.style.display === 'flex') {
+    e.preventDefault();
+    cerrarTicket();
+  }
+});
+document.addEventListener('click', (e) => {
+  if (e.target && e.target.id === 'ticketModal') cerrarTicket();
+});
 
 function formatNumber(num) {
   return new Intl.NumberFormat('es-CL').format(num);

@@ -309,10 +309,26 @@
           <div id="valeAplicadoInfo" style="font-size: 0.78rem; margin-top: 0.3rem; display: none;"></div>
         </div>
 
+        <?php if ($propinaActiva): ?>
+        <!-- Propina voluntaria (no forma parte de la venta ni de la boleta) -->
+        <div id="bloquePropina">
+          <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">PROPINA (VOLUNTARIA)</label>
+          <div style="display: flex; gap: 0.35rem; margin-top: 0.2rem;">
+            <button type="button" class="btn btn-secondary btn-propina" data-modo="0" onclick="setPropinaModo('0')" style="flex: 1; padding: 0.4rem; font-size: 0.8rem;">Sin propina</button>
+            <button type="button" class="btn btn-secondary btn-propina" data-modo="sugerida" onclick="setPropinaModo('sugerida')" style="flex: 1.3; padding: 0.4rem; font-size: 0.8rem;" id="btnPropinaSugerida"><?= (int)$propinaPorcentaje ?>% sugerida</button>
+            <div style="position: relative; flex: 1.2;">
+              <span style="position: absolute; left: 0.5rem; top: 50%; transform: translateY(-50%); font-size: 0.8rem; color: var(--text-muted);">$</span>
+              <input type="number" id="propinaOtroInput" min="0" step="100" placeholder="Otro" class="form-control" oninput="setPropinaModo('otro')" style="padding: 0.4rem 0.4rem 0.4rem 1.2rem; font-size: 0.85rem;">
+            </div>
+          </div>
+        </div>
+        <?php endif; ?>
+
         <!-- Muestra Total a Pagar Grande -->
         <div style="background: rgba(16,185,129,0.1); border: 1px solid var(--success); padding: 1rem; border-radius: 12px; text-align: center;">
           <span style="font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">TOTAL A COBRAR</span>
           <div id="modalMontoTotal" style="font-size: 2.5rem; font-weight: 800; color: var(--success); font-family: monospace;">$0</div>
+          <div id="modalDesglosePropina" style="display: none; font-size: 0.82rem; color: var(--text-muted);"></div>
         </div>
       </div>
 
@@ -454,6 +470,7 @@
 <!-- Modal de Ticket / Comprobante -->
 <div id="ticketModal" class="ticket-overlay" style="display: none;">
   <div class="ticket-modal__card">
+    <button type="button" class="ticket-cerrar-x no-print" onclick="cerrarTicket()" title="Cerrar (Esc)" aria-label="Cerrar">✕</button>
     <div class="ticket-paper" id="ticketPaper">
       <div class="tk-center">
         <div class="tk-strong tk-lg"><?= htmlspecialchars($cfgLocal['MINIMARKET_NOMBRE'] ?? 'MINIMARKET') ?></div>
@@ -474,6 +491,10 @@
       <div class="tk-row" id="ticketSubtotalRow" style="display: none;"><span>Subtotal</span><span id="ticketSubtotal"></span></div>
       <div class="tk-row" id="ticketDescuentoRow" style="display: none;"><span>Descuento</span><span id="ticketDescuento"></span></div>
       <div class="tk-row tk-strong tk-lg"><span>TOTAL</span><span id="ticketTotal"></span></div>
+      <div id="ticketPropinaBox" style="display: none;">
+        <div class="tk-row"><span>Propina (voluntaria)</span><span id="ticketPropina"></span></div>
+        <div class="tk-row tk-strong"><span>Total pagado</span><span id="ticketTotalPagado"></span></div>
+      </div>
 
       <div class="tk-sep"></div>
       <div id="ticketPagos" class="tk-pagos"></div>
@@ -517,7 +538,9 @@
       <button id="ticketDtePrintBtn" onclick="imprimirPdfDirecto(this.dataset.url)" class="btn btn-success" style="display: none;">
         <i class="fa-solid fa-print"></i> Imprimir boleta SII
       </button>
-      <button onclick="cerrarTicket()" class="btn btn-secondary">Cerrar</button>
+      <button onclick="cerrarTicket()" class="btn btn-primary btn-nueva-venta" id="btnNuevaVenta">
+        <i class="fa-solid fa-cart-plus"></i> Nueva venta (Esc)
+      </button>
     </div>
   </div>
 </div>
@@ -682,6 +705,8 @@ async function ejecutarConsultaPrecio() {
   window.CONFIG_SUPERVISION = <?= json_encode($configSupervision) ?>;
   window.MODULO_SUPERVISOR = <?= modulo_activo('supervisor') ? 'true' : 'false' ?>;
   window.MESAS_IMPRIMIR_COMANDA = <?= json_encode($mesasImprimirComanda ?? 'SI') ?>;
+  window.PROPINA_ACTIVA = <?= !empty($propinaActiva) ? 'true' : 'false' ?>;
+  window.PROPINA_PORCENTAJE = <?= (int)($propinaPorcentaje ?? 10) ?>;
   window.CURRENT_USER_ROL = "<?= htmlspecialchars($user['rol'] ?? 'Cajero') ?>";
   window.CURRENT_USER_NAME = "<?= htmlspecialchars($user['nombre'] ?? '') ?>";
   window.POS_DISENO_GRID_DEFAULT = "<?= htmlspecialchars($posDisenoGridDefault ?? 'estandar') ?>";
