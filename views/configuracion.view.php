@@ -45,6 +45,9 @@
   <button onclick="switchTab('tabLicencia')" class="btn btn-secondary tab-btn" id="btn-tabLicencia">
     🔑 Licencia
   </button>
+  <button onclick="switchTab('tabActualizaciones')" class="btn btn-secondary tab-btn" id="btn-tabActualizaciones">
+    <i class="fa-solid fa-cloud-arrow-down"></i> Actualizaciones
+  </button>
 </div>
 
 <!-- PESTAÑA: LICENCIA -->
@@ -110,6 +113,93 @@
       <button type="submit" class="btn btn-primary" style="margin-top: 0.75rem;"><i class="fa-solid fa-key"></i> Instalar licencia</button>
     </form>
     <?php endif; ?>
+  </div>
+</div>
+
+<!-- PESTAÑA: ACTUALIZACIONES REMOTAS -->
+<div id="tabActualizaciones" class="tab-pane" style="display: none;">
+  <div class="table-card" style="padding: 1.75rem; max-width: 800px;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-dark); padding-bottom: 1rem;">
+      <div>
+        <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.25rem;">
+          <i class="fa-solid fa-cloud-arrow-down" style="color: var(--primary);"></i> Actualizaciones del Sistema
+        </h3>
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0;">
+          Permite recibir nuevas versiones, correcciones y funciones directamente sin visitas presenciales.
+        </p>
+      </div>
+
+      <button type="button" id="btnBuscarActualizacionesManual" onclick="comprobarActualizaciones(true)" class="btn btn-primary" style="padding: 0.6rem 1.25rem; font-size: 0.9rem;">
+        <i class="fa-solid fa-arrows-rotate"></i> Buscar actualizaciones ahora
+      </button>
+    </div>
+
+    <!-- Ficha de estado actual -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.75rem;">
+      <div style="background: var(--surface-dark); border: 1px solid var(--border-dark); border-radius: 12px; padding: 1rem;">
+        <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Versión Instalada</div>
+        <div style="font-size: 1.35rem; font-weight: 800; color: var(--success); font-family: monospace;">
+          <?= htmlspecialchars(APP_VERSION) ?>
+        </div>
+      </div>
+
+      <div style="background: var(--surface-dark); border: 1px solid var(--border-dark); border-radius: 12px; padding: 1rem;">
+        <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Última Comprobación</div>
+        <div style="font-size: 0.95rem; font-weight: 600; color: var(--text-main); margin-top: 0.25rem;">
+          <?= !empty($config['UPDATE_ULTIMA_REVISION']) ? htmlspecialchars($config['UPDATE_ULTIMA_REVISION']) : 'Nunca' ?>
+        </div>
+      </div>
+
+      <div style="background: var(--surface-dark); border: 1px solid var(--border-dark); border-radius: 12px; padding: 1rem;">
+        <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Soporte de Licencia</div>
+        <div style="font-size: 0.95rem; font-weight: 600; color: var(--text-main); margin-top: 0.25rem;">
+          <?= !empty($licencia['actualizaciones_hasta']) ? 'Hasta ' . htmlspecialchars($licencia['actualizaciones_hasta']) : 'Sin límite' ?>
+        </div>
+      </div>
+    </div>
+
+    <!-- Formulario de Configuración -->
+    <form method="POST" action="configuracion.php" style="display: flex; flex-direction: column; gap: 1.25rem;">
+      <?= csrfField() ?>
+      <input type="hidden" name="action" value="save_config">
+
+      <div>
+        <label style="display: block; font-weight: 600; margin-bottom: 0.4rem;">
+          URL del Manifiesto de Actualizaciones (version.json)
+        </label>
+        <input type="url" name="config[UPDATE_CHECK_URL]" value="<?= htmlspecialchars($config['UPDATE_CHECK_URL'] ?? '') ?>" class="form-control" style="width: 100%; font-family: monospace; font-size: 0.85rem;" placeholder="https://raw.githubusercontent.com/fcardenas886/minimarket-pos-local/master/version.json">
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.35rem;">
+          Enlace directo al archivo <code>version.json</code>. Si lo dejas vacío, usa por defecto tu repositorio de GitHub (<code>fcardenas886/minimarket-pos-local</code>).
+        </p>
+      </div>
+
+      <div>
+        <label style="display: block; font-weight: 600; margin-bottom: 0.4rem;">
+          Modo de Comprobación y Actualización
+        </label>
+        <?php $modoAct = $config['UPDATE_MODO'] ?? 'preguntar'; ?>
+        <select name="config[UPDATE_MODO]" class="form-control" style="max-width: 450px;">
+          <option value="preguntar" <?= $modoAct === 'preguntar' ? 'selected' : '' ?>>
+            🔔 Preguntar al usuario antes de actualizar (Recomendado)
+          </option>
+          <option value="automatica" <?= $modoAct === 'automatica' ? 'selected' : '' ?>>
+            ⚡ Actualizar automáticamente al iniciar el programa
+          </option>
+          <option value="desactivada" <?= $modoAct === 'desactivada' ? 'selected' : '' ?>>
+            🚫 Desactivar comprobación automática (solo manual)
+          </option>
+        </select>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.35rem;">
+          En modo <em>Preguntar</em>, al abrir el POS o iniciar sesión se mostrará una ventana con las novedades para que el usuario confirme cuándo aplicar la actualización.
+        </p>
+      </div>
+
+      <div style="margin-top: 0.5rem;">
+        <button type="submit" class="btn btn-primary" style="padding: 0.75rem 2rem; font-size: 1rem; font-weight: bold;">
+          <i class="fa-solid fa-floppy-disk"></i> Guardar Ajustes de Actualización
+        </button>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -204,6 +294,14 @@
             <option value="true" <?= ($config['PERMITIR_STOCK_NEGATIVO'] ?? '') === 'true' ? 'selected' : '' ?>>Permitir (el stock puede quedar en negativo)</option>
           </select>
           <p style="color: var(--text-muted); font-size: 0.72rem; margin-top: 0.25rem;">Útil si registras ventas antes de actualizar el stock de una recepción. Con "Permitir", el sistema deja vender aunque no alcance el stock registrado.</p>
+        </div>
+        <div>
+          <label style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">LEY DE REDONDEO EN EFECTIVO (LEY 20.956)</label>
+          <select name="config[REDONDEO_LEY_ACTIVO]" class="form-control">
+            <option value="true" <?= ($config['REDONDEO_LEY_ACTIVO'] ?? 'true') === 'true' ? 'selected' : '' ?>>Activo (1-5 baja a 0, 6-9 sube a 10)</option>
+            <option value="false" <?= ($config['REDONDEO_LEY_ACTIVO'] ?? '') === 'false' ? 'selected' : '' ?>>Desactivado (cobro exacto)</option>
+          </select>
+          <p style="color: var(--text-muted); font-size: 0.72rem; margin-top: 0.25rem;">Regla legal obligatoria en Chile para pagos en efectivo por el retiro de monedas de $1 y $5. No afecta tarjetas ni transferencias.</p>
         </div>
       </div>
 

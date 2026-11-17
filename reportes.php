@@ -387,7 +387,7 @@ if ($tab === 'creditos') {
         FROM pagosventa pv
         JOIN ventas v ON pv.VentaID = v.VentaID
         WHERE v.Estado = 'Completada' 
-          AND pv.MetodoPago = 'Credito_Interno' 
+          AND pv.MetodoPago IN ('Credito Interno', 'Credito', 'Fiado') 
           AND DATE(v.FechaVenta) BETWEEN :inicio AND :fin
     ");
     $stmtFiadoPeriodo->execute([':inicio' => $fechaInicio, ':fin' => $fechaFin]);

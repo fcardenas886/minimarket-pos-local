@@ -37,8 +37,13 @@
     </div>
     <div>
       <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Versión Actual</div>
-      <div style="font-size: 1.25rem; font-weight: 800; color: var(--success); font-family: monospace;">
-        <?= APP_VERSION ?>
+      <div style="display: flex; align-items: center; gap: 0.6rem; margin-top: 0.15rem;">
+        <span style="font-size: 1.25rem; font-weight: 800; color: var(--success); font-family: monospace;">
+          <?= APP_VERSION ?>
+        </span>
+        <button type="button" id="btnBuscarActualizacionesManual" onclick="comprobarActualizaciones(true)" class="btn btn-secondary" style="padding: 0.2rem 0.55rem; font-size: 0.75rem;" title="Comprobar si hay una versión más reciente">
+          <i class="fa-solid fa-arrows-rotate"></i> Actualizar
+        </button>
       </div>
     </div>
   </div>

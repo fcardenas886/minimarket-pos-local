@@ -34,7 +34,10 @@ try {
         }
     }
 
-    // Verificar venta
+    // Iniciar transacción para bloqueo y reversión consistente
+    $pdo->beginTransaction();
+
+    // Verificar venta con bloqueo FOR UPDATE
     $stmtV = $pdo->prepare("SELECT * FROM ventas WHERE VentaID = :vid FOR UPDATE");
     $stmtV->execute([':vid' => $ventaID]);
     $venta = $stmtV->fetch();
@@ -56,7 +59,12 @@ try {
         throw new Exception("La venta #$ventaID ya tiene una devolución registrada; no se puede anular completa (repondría stock por duplicado). Revisa el historial de devoluciones de esta venta.");
     }
 
-    $pdo->beginTransaction();
+    // Si la venta fue a crédito (fiado) y ya tiene abonos asociados, no anular directamente
+    $stmtAbonosPrevia = $pdo->prepare("SELECT COUNT(*) FROM abonoscredito WHERE VentaID = :vid");
+    $stmtAbonosPrevia->execute([':vid' => $ventaID]);
+    if ((int)$stmtAbonosPrevia->fetchColumn() > 0) {
+        throw new Exception("La venta #$ventaID tiene abonos de pago de crédito registrados; no se puede anular directamente. Revisa la cuenta del cliente.");
+    }
 
     // 1. Cambiar estado de la venta
     $stmtUpdV = $pdo->prepare("UPDATE ventas SET Estado = 'Anulada' WHERE VentaID = :vid");
@@ -88,6 +96,41 @@ try {
             ':val' => $d['PrecioUnitario']
         ]);
         $stmtUpdStock->execute([':cant' => $d['Cantidad'], ':pid' => $d['ProductoID']]);
+    }
+
+    // 3. Revertir efectos financieros de los medios de pago (crédito fiado, puntos, vales)
+    $stmtPagos = $pdo->prepare("SELECT MetodoPago, Monto FROM pagosventa WHERE VentaID = :vid");
+    $stmtPagos->execute([':vid' => $ventaID]);
+    $pagosRealizados = $stmtPagos->fetchAll();
+
+    foreach ($pagosRealizados as $pago) {
+        $metodo = $pago['MetodoPago'];
+        $montoPago = (int)$pago['Monto'];
+
+        if (in_array($metodo, ['Credito Interno', 'Credito', 'Fiado'], true) && !empty($venta['ClienteID'])) {
+            // Descontar la deuda generada en la cuenta del cliente
+            $pdo->prepare("UPDATE clientes SET SaldoDeudor = GREATEST(0, COALESCE(SaldoDeudor, 0) - :monto) WHERE ClienteID = :cid")
+                ->execute([':monto' => $montoPago, ':cid' => $venta['ClienteID']]);
+        } elseif ($metodo === 'Puntos' && !empty($venta['ClienteID'])) {
+            // Devolver los puntos canjeados al cliente
+            $pdo->prepare("UPDATE clientes SET PuntosAcumulados = COALESCE(PuntosAcumulados, 0) + :pts WHERE ClienteID = :cid")
+                ->execute([':pts' => $montoPago, ':cid' => $venta['ClienteID']]);
+        } elseif ($metodo === 'Vale Devolucion') {
+            // Restaurar saldo disponible del vale y volver a activarlo
+            $stCanjes = $pdo->prepare("SELECT ValeID, Monto FROM valescanjes WHERE VentaID = :vid");
+            $stCanjes->execute([':vid' => $ventaID]);
+            foreach ($stCanjes->fetchAll() as $canje) {
+                $pdo->prepare("UPDATE valesdevolucion SET MontoDisponible = MontoDisponible + :m, Estado = 'Activo' WHERE ValeID = :val")
+                    ->execute([':m' => $canje['Monto'], ':val' => $canje['ValeID']]);
+            }
+            $pdo->prepare("DELETE FROM valescanjes WHERE VentaID = :vid")->execute([':vid' => $ventaID]);
+        }
+    }
+
+    // Descontar los puntos acumulados ganados en esta compra
+    if (!empty($venta['ClienteID']) && (int)($venta['PuntosGanados'] ?? 0) > 0) {
+        $pdo->prepare("UPDATE clientes SET PuntosAcumulados = GREATEST(0, COALESCE(PuntosAcumulados, 0) - :pts) WHERE ClienteID = :cid")
+            ->execute([':pts' => (int)$venta['PuntosGanados'], ':cid' => $venta['ClienteID']]);
     }
 
     // 3. Registrar en AuditoriaEventos si existe la tabla

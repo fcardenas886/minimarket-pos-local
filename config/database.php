@@ -1,11 +1,18 @@
 <?php
 // Version de la app: unica fuente de verdad, para que login y footer nunca queden desincronizados.
 // El instalador (instalador/compilar.php) toma la versión de aquí: no se escribe en otro lado.
-define('APP_VERSION', 'v4.1.0');
+define('APP_VERSION', 'v4.2.0');
 
 // Novedades reales por versión, para la pantalla de bienvenida y el módulo "Acerca de".
 // Registra la cronología completa de la evolución del sistema desde su inicio.
 define('APP_CHANGELOG', [
+    'v4.2.0' => [
+        'Ley de Redondeo en Efectivo (Ley N° 20.956): cálculo y desglose automático de diferencias (-$5 a +$4 CLP) en pagos en efectivo en caja POS y comprobantes impresos.',
+        'Sistema de Actualizaciones Remotas Automáticas: detección y aplicación silenciosa de nuevas versiones al abrir el programa, sin visitas presenciales.',
+        'Soporte completo para productos sin control de stock (servicios, recargas y preparación) con venta ilimitada en terminales POS.',
+        'Corrección en auditoría de fiados y cartera de clientes en el centro de reportes.',
+        'Anulación segura de ventas con reversión atómica de saldos deudores, puntos acumulados y vales de cambio.',
+    ],
     'v4.1.0' => [
         'Propina voluntaria al cobrar: se sugiere un porcentaje (10% por defecto) y el cliente puede dar menos o nada. No va en la boleta ni lleva IVA, y aparece aparte en el comprobante y en el cierre de caja.',
         'Al cobrar una mesa se propone la propina sugerida; en venta directa parte sin propina.',
@@ -215,6 +222,24 @@ function getDB() {
                 PDO::ATTR_EMULATE_PREPARES => false,
             ]);
         } catch (PDOException $e) {
+            $esApi = (PHP_SAPI !== 'cli') && (
+                str_contains($_SERVER['SCRIPT_FILENAME'] ?? '', 'api/') ||
+                str_contains($_SERVER['REQUEST_URI'] ?? '', '/api/') ||
+                str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json')
+            );
+            if ($esApi) {
+                http_response_code(500);
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode([
+                    'success' => false,
+                    'error' => 'Error de conexión a la base de datos: ' . $e->getMessage()
+                ], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            if (PHP_SAPI === 'cli') {
+                fwrite(STDERR, "Error de conexión a MySQL (" . DB_NAME . "): " . $e->getMessage() . "\n");
+                exit(1);
+            }
             die("<div style='font-family:sans-serif; padding:20px; color:#c0392b; background:#fadbd8; border-radius:8px; margin:20px;'>
                 <h2>⚠️ Error de conexión a la Base de Datos</h2>
                 <p><strong>Detalle:</strong> " . htmlspecialchars($e->getMessage()) . "</p>

@@ -2,6 +2,7 @@
 header('Content-Type: application/json');
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/fiscal.php';
 
 if (empty($_SESSION['usuario'])) {
     echo json_encode(['success' => false, 'error' => 'No autorizado']);
@@ -253,14 +254,38 @@ try {
         }
     }
 
-    // Los pagos declarados deben cubrir el monto restante (Total - Vale) más la propina.
-    $montoRestante = max(0, $montoTotal - $valeAplicado);
+    // Ley 20.956: Regla de redondeo para pagos en efectivo en Chile.
+    // Solo aplica a pagos en efectivo (únicos o mixtos); los medios electrónicos no se redondean.
+    $redondeo = 0;
+    $stmtCfgRed = $pdo->query("SELECT Valor FROM configuraciones WHERE Clave = 'REDONDEO_LEY_ACTIVO'");
+    $redondeoActivo = ($stmtCfgRed ? $stmtCfgRed->fetchColumn() : 'true') !== 'false';
+
+    $tieneEfectivo = false;
+    $montoEfectivoDeclarado = 0;
+    foreach ($pagosList as $pago) {
+        if (in_array($pago['metodo'] ?? '', ['Efectivo', 'Efectivo Mixto'], true)) {
+            $tieneEfectivo = true;
+            $montoEfectivoDeclarado += (int)($pago['monto'] ?? 0);
+        }
+    }
+
+    if ($redondeoActivo && $tieneEfectivo) {
+        if (count($pagosList) === 1 && in_array($pagosList[0]['metodo'] ?? '', ['Efectivo', 'Efectivo Mixto'], true)) {
+            $baseEfectivo = max(0, $montoTotal - $valeAplicado + $propina);
+            $redondeo = calcularRedondeoLey20956($baseEfectivo);
+        } elseif ($montoEfectivoDeclarado > 0) {
+            $redondeo = calcularRedondeoLey20956($montoEfectivoDeclarado);
+        }
+    }
+
+    // Los pagos declarados deben cubrir el monto restante (Total - Vale) más la propina y el redondeo.
+    $montoRestante = max(0, $montoTotal - $valeAplicado + $propina + $redondeo);
     $sumaPagos = 0;
     foreach ($pagosList as $pago) {
         $sumaPagos += (int)(($pago['monto'] ?? 0) > 0 ? $pago['monto'] : $montoRestante);
     }
-    if (($sumaPagos + $valeAplicado) < $montoTotal + $propina) {
-        throw new Exception("Los pagos declarados (" . formatCLP($sumaPagos + $valeAplicado) . ") no cubren el total a cobrar (" . formatCLP($montoTotal + $propina) . ($propina ? ', con propina' : '') . ").");
+    if (($sumaPagos + $valeAplicado) < ($montoTotal + $propina + $redondeo)) {
+        throw new Exception("Los pagos declarados (" . formatCLP($sumaPagos + $valeAplicado) . ") no cubren el total a cobrar (" . formatCLP($montoTotal + $propina + $redondeo) . ($propina ? ', con propina' : '') . ($redondeo ? ', con redondeo Ley 20.956' : '') . ").");
     }
 
     // Calcular IVA (19%)
@@ -272,8 +297,8 @@ try {
 
     // 2. Insertar Venta
     $stmtVenta = $pdo->prepare("
-        INSERT INTO ventas (TurnoID, ClienteID, TipoDocumento, MontoNeto, MontoIva, DescuentoGlobal, MontoTotal, Propina, MontoPagado, Vuelto, PuntosGanados, Estado)
-        VALUES (:turno, :cliente, :tipo, :neto, :iva, :desc, :total, :propina, :pagado, :vuelto, :puntos, 'Completada')
+        INSERT INTO ventas (TurnoID, ClienteID, TipoDocumento, MontoNeto, MontoIva, DescuentoGlobal, MontoTotal, Propina, Redondeo, MontoPagado, Vuelto, PuntosGanados, Estado)
+        VALUES (:turno, :cliente, :tipo, :neto, :iva, :desc, :total, :propina, :redondeo, :pagado, :vuelto, :puntos, 'Completada')
     ");
     $stmtVenta->execute([
         ':turno' => $turnoID,
@@ -284,7 +309,8 @@ try {
         ':desc' => $descuentoGlobal,
         ':total' => $montoTotal,
         ':propina' => $propina,
-        ':pagado' => $montoPagado > 0 ? $montoPagado : $montoTotal + $propina,
+        ':redondeo' => $redondeo,
+        ':pagado' => $montoPagado > 0 ? $montoPagado : ($montoTotal + $propina + $redondeo),
         ':vuelto' => $vuelto,
         ':puntos' => $puntosGanados
     ]);
@@ -387,7 +413,7 @@ try {
 
     foreach ($pagosList as $pago) {
         $metodo = $pago['metodo'];
-        $montoRestante = max(0, $montoTotal - $valeAplicado);
+        $montoRestante = max(0, $montoTotal - $valeAplicado + $propina + $redondeo);
         $montoPago = (int)(($pago['monto'] ?? 0) > 0 ? $pago['monto'] : $montoRestante);
 
         // Si el vale ya cubrió todo, el pago adicional es $0 y no se inserta
@@ -512,6 +538,7 @@ try {
         'vuelto' => $vuelto,
         'puntos_ganados' => $puntosGanados,
         'propina' => $propina,
+        'redondeo' => $redondeo,
         'fecha' => date('d/m/Y H:i:s')
     ];
 

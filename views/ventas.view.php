@@ -501,6 +501,14 @@
         <span>TOTAL</span>
         <span id="ticketTotal"></span>
       </div>
+      <div id="ticketPropinaRow" class="tk-row" style="display: none;">
+        <span>Propina (voluntaria)</span>
+        <span id="ticketPropina"></span>
+      </div>
+      <div id="ticketRedondeoRow" class="tk-row" style="display: none;">
+        <span>Redondeo Ley 20.956</span>
+        <span id="ticketRedondeo"></span>
+      </div>
 
       <div class="tk-sep"></div>
       <div id="ticketPagos" class="tk-pagos"></div>
@@ -821,6 +829,27 @@ async function reimprimirTicketVenta(id) {
     }
 
     document.getElementById('ticketTotal').textContent = formatPesos(v.total);
+
+    const propRow = document.getElementById('ticketPropinaRow');
+    if (propRow) {
+      if (v.propina > 0) {
+        propRow.style.display = 'flex';
+        document.getElementById('ticketPropina').textContent = formatPesos(v.propina);
+      } else {
+        propRow.style.display = 'none';
+      }
+    }
+
+    const redRow = document.getElementById('ticketRedondeoRow');
+    if (redRow) {
+      if (v.redondeo && v.redondeo !== 0) {
+        redRow.style.display = 'flex';
+        const difTxt = v.redondeo > 0 ? `+${formatPesos(v.redondeo)}` : `-${formatPesos(Math.abs(v.redondeo))}`;
+        document.getElementById('ticketRedondeo').textContent = difTxt;
+      } else {
+        redRow.style.display = 'none';
+      }
+    }
 
     // Pagos
     const pagosEl = document.getElementById('ticketPagos');

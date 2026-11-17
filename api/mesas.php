@@ -240,11 +240,11 @@ try {
         if (!$ped) responder(['success' => false, 'error' => 'La cuenta ya fue cobrada o no existe.'], 404);
         // Agrupar por producto para el carrito de la caja.
         $st = $pdo->prepare("
-            SELECT p.ProductoID, p.Nombre, p.CodigoBarras, p.PrecioVenta, p.Stock, p.EsPesable, p.CategoriaID,
+            SELECT p.ProductoID, p.Nombre, p.CodigoBarras, p.PrecioVenta, p.Stock, p.ControlaStock, p.EsPesable, p.CategoriaID,
                    SUM(d.Cantidad) AS Cantidad
             FROM mesapedidosdetalle d JOIN productos p ON p.ProductoID = d.ProductoID
             WHERE d.PedidoID = :p AND d.Anulado = 0
-            GROUP BY p.ProductoID, p.Nombre, p.CodigoBarras, p.PrecioVenta, p.Stock, p.EsPesable, p.CategoriaID
+            GROUP BY p.ProductoID, p.Nombre, p.CodigoBarras, p.PrecioVenta, p.Stock, p.ControlaStock, p.EsPesable, p.CategoriaID
             ORDER BY MIN(d.DetalleID)
         ");
         $st->execute([':p' => $pedidoID]);

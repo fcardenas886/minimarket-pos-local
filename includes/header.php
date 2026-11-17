@@ -112,6 +112,69 @@ $changelogActual = APP_CHANGELOG[APP_VERSION] ?? [];
 
 <script>window.CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]').content;</script>
 <script src="<?= asset_url('assets/js/ui.js') ?>"></script>
+<script src="<?= asset_url('assets/js/actualizador.js') ?>"></script>
+
+<!-- Modal de Notificación de Actualización Remota -->
+<div id="modalActualizacionPOS" class="update-overlay" style="display: none; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(6px); z-index: 10000;">
+  <div class="update-card" style="background: var(--card-bg); border: 1px solid var(--border-dark); border-radius: 20px; padding: 2rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); max-width: 520px;">
+    
+    <!-- Vista 1: Detalle y novedades de la actualización -->
+    <div id="updateModalVistaDetalle" style="width: 100%;">
+      <div style="display: flex; justify-content: center; margin-bottom: 1rem;">
+        <div style="width: 64px; height: 64px; border-radius: 18px; background: rgba(99, 102, 241, 0.15); display: flex; align-items: center; justify-content: center; color: var(--primary); font-size: 1.8rem;">
+          <i class="fa-solid fa-cloud-arrow-down"></i>
+        </div>
+      </div>
+
+      <h2 style="font-size: 1.4rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.35rem;">
+        ¡Nueva Versión Disponible!
+      </h2>
+      <p style="color: var(--text-muted); font-size: 0.92rem; margin-bottom: 1.25rem;">
+        Hay una actualización lista: <strong id="updateModalNuevaVersion" style="color: var(--primary); font-size: 1.05rem;"></strong> 
+        <span id="updateModalTamano" style="font-size: 0.8rem; color: var(--text-muted);"></span><br>
+        <span style="font-size: 0.82rem;">Tu versión actual es <strong id="updateModalVersionActual"></strong> &bull; <span id="updateModalFecha"></span></span>
+      </p>
+
+      <div id="updateModalLicenciaAviso" style="display: none; background: rgba(245, 158, 11, 0.15); border: 1px solid #f59e0b; border-radius: 8px; padding: 0.75rem; font-size: 0.85rem; color: var(--text-main); margin-bottom: 1rem; text-align: left;"></div>
+
+      <div class="update-changelog" style="max-height: 220px; overflow-y: auto; margin-bottom: 1.5rem;">
+        <div class="update-changelog__label">Novedades y mejoras</div>
+        <ul id="updateModalNovedades"></ul>
+      </div>
+
+      <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+        <button type="button" id="btnIniciarActualizacion" onclick="ejecutarActualizacion()" class="btn btn-primary" style="padding: 0.75rem 1.5rem; font-size: 0.95rem; font-weight: 700; border-radius: 10px;">
+          <i class="fa-solid fa-cloud-arrow-down"></i> Actualizar Ahora
+        </button>
+        <button type="button" onclick="cerrarModalActualizacion(true)" class="btn btn-secondary" style="padding: 0.75rem 1.25rem; font-size: 0.95rem; border-radius: 10px;">
+          Más Tarde
+        </button>
+      </div>
+    </div>
+
+    <!-- Vista 2: Descargando e instalando en segundo plano -->
+    <div id="updateModalVistaProgreso" style="display: none; width: 100%; flex-direction: column; align-items: center; gap: 1.25rem;">
+      <div class="update-loader">
+        <div class="update-loader__ring"></div>
+        <i class="fa-solid fa-arrows-rotate fa-spin update-loader__icon"></i>
+      </div>
+
+      <div>
+        <h3 id="updateProgresoEstado" style="font-size: 1.25rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">
+          Descargando actualización...
+        </h3>
+        <p id="updateProgresoSubtexto" style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.5;">
+          Por favor espere, no cierre la ventana ni apague el equipo.
+        </p>
+      </div>
+
+      <button type="button" id="updateModalBtnCerrar" onclick="cerrarModalActualizacion(false)" class="btn btn-secondary" style="display: none; margin-top: 0.5rem;">
+        Cerrar
+      </button>
+    </div>
+
+  </div>
+</div>
 
 <nav class="navbar">
   <a href="index.php" class="brand" style="display: flex; align-items: center; gap: 0.6rem; text-decoration: none;">

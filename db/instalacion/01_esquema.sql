@@ -673,6 +673,7 @@ CREATE TABLE `ventas` (
   `DescuentoGlobal` int NOT NULL DEFAULT '0',
   `MontoTotal` int NOT NULL DEFAULT '0',
   `Propina` int NOT NULL DEFAULT '0',
+  `Redondeo` int NOT NULL DEFAULT '0',
   `MontoPagado` int NOT NULL DEFAULT '0',
   `Vuelto` int NOT NULL DEFAULT '0',
   `PuntosGanados` int NOT NULL DEFAULT '0',

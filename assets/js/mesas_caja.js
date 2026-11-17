@@ -57,6 +57,7 @@
         CodigoBarras: i.CodigoBarras,
         PrecioVenta: parseInt(i.PrecioVenta),
         Stock: parseFloat(i.Stock),
+        ControlaStock: (i.ControlaStock !== undefined && i.ControlaStock !== null) ? (parseInt(i.ControlaStock) === 1) : true,
         EsPesable: i.EsPesable,
         CategoriaID: i.CategoriaID,
         cantidad: parseFloat(i.Cantidad),

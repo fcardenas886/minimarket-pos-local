@@ -31,4 +31,37 @@ passthru('"' . $iscc . '" /Q /DAppVersion=' . $version . ' ' . escapeshellarg(__
 if ($c !== 0) { fwrite(STDERR, "Inno Setup terminó con error ($c)\n"); exit($c); }
 
 $exe = __DIR__ . "/salida/MinimarketPOS-Setup-$version.exe";
-printf("Listo: %s (%.1f MB)\n", $exe, filesize($exe) / 1048576);
+$sizeMb = round(filesize($exe) / 1048576, 1);
+$sha256 = hash_file('sha256', $exe);
+printf("Listo: %s (%.1f MB)\n", $exe, $sizeMb);
+
+// Cargar changelog para el manifiesto remoto version.json
+require_once "$raiz/config/database.php";
+$novedades = APP_CHANGELOG["v$version"] ?? APP_CHANGELOG[$version] ?? [
+    "Actualización de sistema v$version",
+    "Mejoras de rendimiento y estabilidad"
+];
+
+$manifest = [
+    'version'    => "v$version",
+    'fecha'      => date('Y-m-d'),
+    'archivo'    => "MinimarketPOS-Setup-$version.exe",
+    'tamano_mb'  => $sizeMb,
+    'sha256'     => $sha256,
+    'url'        => "https://github.com/fcardenas886/minimarket-pos-local/releases/download/v$version/MinimarketPOS-Setup-$version.exe",
+    'obligatoria'=> false,
+    'novedades'  => $novedades
+];
+
+$jsonPath = __DIR__ . '/salida/version.json';
+file_put_contents($jsonPath, json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+echo "\n=======================================================\n";
+echo "== Manifiesto de actualización generado con éxito:   ==\n";
+echo "   $jsonPath\n";
+echo "=======================================================\n";
+echo "Para enviar la actualización a tus clientes de forma remota:\n";
+echo " 1. Sube 'MinimarketPOS-Setup-$version.exe' a tu servidor web, VPS o GitHub Releases.\n";
+echo " 2. En 'salida/version.json', edita el campo 'url' con el enlace directo al .exe subido.\n";
+echo " 3. Sube 'version.json' a tu servidor (la URL que configuraste en el sistema de tus clientes).\n";
+echo "\n ¡Listo! Cuando los clientes abran Minimarket POS, les saldrá el aviso con las novedades\n";
+echo " y el botón 'Actualizar Ahora', aplicándose todo de manera 100% automática.\n\n";

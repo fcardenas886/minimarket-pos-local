@@ -21,6 +21,13 @@ function getPropina() {
   if (propinaModo === 'otro') return Math.max(0, parseInt(document.getElementById('propinaOtroInput')?.value) || 0);
   return 0;
 }
+function getRedondeoEfectivo(monto) {
+  if (!window.REDONDEO_LEY_ACTIVO || metodoSeleccionadoModal !== 'Efectivo') return 0;
+  const unidad = monto % 10;
+  if (unidad >= 1 && unidad <= 5) return -unidad;
+  if (unidad >= 6 && unidad <= 9) return 10 - unidad;
+  return 0;
+}
 function setPropinaModo(modo) {
   propinaModo = modo;
   const otro = document.getElementById('propinaOtroInput');
@@ -31,17 +38,32 @@ function setPropinaModo(modo) {
   }
   actualizarTotalesPago();
   const montoInput = document.getElementById('montoRecibidoModal');
-  if (montoInput) montoInput.value = getCartTotal() + getPropina();
+  const baseCobro = getCartTotal() + getPropina();
+  if (montoInput) montoInput.value = baseCobro + getRedondeoEfectivo(baseCobro);
   calcularVueltoModal();
 }
 function actualizarTotalesPago() {
   const total = getCartTotal();
   const propina = getPropina();
-  document.getElementById('modalMontoTotal').textContent = `$${formatNumber(total + propina)}`;
+  const baseCobro = total + propina;
+  const redondeo = getRedondeoEfectivo(baseCobro);
+  const totalFinal = baseCobro + redondeo;
+
+  document.getElementById('modalMontoTotal').textContent = `$${formatNumber(totalFinal)}`;
   const desglose = document.getElementById('modalDesglosePropina');
   if (desglose) {
     desglose.style.display = propina > 0 ? 'block' : 'none';
     desglose.textContent = `Venta $${formatNumber(total)} + propina $${formatNumber(propina)}`;
+  }
+  const desgloseRed = document.getElementById('modalDesgloseRedondeo');
+  if (desgloseRed) {
+    if (redondeo !== 0) {
+      desgloseRed.style.display = 'block';
+      const difStr = redondeo > 0 ? `+$${redondeo}` : `-$${Math.abs(redondeo)}`;
+      desgloseRed.textContent = `Ley de Redondeo (efectivo): ${difStr}`;
+    } else {
+      desgloseRed.style.display = 'none';
+    }
   }
   document.querySelectorAll('.btn-propina').forEach(b => {
     const activo = b.dataset.modo === propinaModo;
@@ -634,6 +656,11 @@ function renderProductosGrid() {
     return;
   }
 
+  const formatStockLabel = (p, prefix = '', suffix = '') => {
+    if (p.ControlaStock !== undefined && parseInt(p.ControlaStock) === 0) return 'Sin límite';
+    return `${prefix}${p.Stock}${suffix}`;
+  };
+
   if (disenoGridActual === 'compacto') {
     grid.innerHTML = productosCache.map(p => `
       <div class="product-card" onclick="agregarAlCarritoId(${p.ProductoID})" title="Clic para agregar a la venta">
@@ -641,7 +668,7 @@ function renderProductosGrid() {
         <div class="product-sku">${p.CodigoBarras ? '#' + p.CodigoBarras : (p.CodigoPLU ? 'PLU #' + p.CodigoPLU : 'Sin código')}</div>
         <div class="product-meta">
           <div class="product-price">$${formatNumber(p.PrecioVenta)}</div>
-          <div class="product-stock" title="Stock en tienda">${p.Stock} disp.</div>
+          <div class="product-stock" title="Stock en tienda">${formatStockLabel(p, '', ' disp.')}</div>
         </div>
       </div>
     `).join('');
@@ -652,7 +679,7 @@ function renderProductosGrid() {
         <div style="font-size: 0.75rem; color: var(--text-muted);">${p.CodigoBarras ? '#' + p.CodigoBarras : (p.CodigoPLU ? 'PLU #' + p.CodigoPLU : 'Sin código')}</div>
         <div class="product-meta">
           <div class="product-price">$${formatNumber(p.PrecioVenta)}</div>
-          <div class="product-stock">Stock: ${p.Stock}</div>
+          <div class="product-stock">${formatStockLabel(p, 'Stock: ', '')}</div>
         </div>
       </div>
     `).join('');
@@ -735,7 +762,11 @@ function agregarAlCarrito(producto, cantidad = 1, factor = 1, precioPack = null,
 
   const unidadesNuevas = cantidad * factor;
 
-  if (totalFisicoActual + unidadesNuevas > parseFloat(producto.Stock)) {
+  const controlaStock = (producto.ControlaStock !== undefined && producto.ControlaStock !== null)
+    ? (parseInt(producto.ControlaStock) === 1)
+    : true;
+
+  if (controlaStock && !window.PERMITIR_STOCK_NEGATIVO && (totalFisicoActual + unidadesNuevas > parseFloat(producto.Stock))) {
     toast(`No hay suficiente stock para "${producto.Nombre}". Disponible: ${producto.Stock} unidades (en carrito: ${totalFisicoActual}).`, 'warn');
     return;
   }
@@ -752,6 +783,7 @@ function agregarAlCarrito(producto, cantidad = 1, factor = 1, precioPack = null,
       PrecioBaseUnitario: precioBaseUnitario,
       PrecioVenta: precioUnitario,
       Stock: parseFloat(producto.Stock),
+      ControlaStock: controlaStock,
       cantidad: cantidad,
       factor: factor,
       descPack: descPack,
@@ -814,7 +846,8 @@ function cambiarCantidad(index, delta) {
     .filter((it, idx) => idx !== index && it.ProductoID === item.ProductoID)
     .reduce((sum, it) => sum + (it.cantidad * (it.factor || 1)), 0);
 
-  if ((totalFisicoOtros + (nuevaCant * factor)) > item.Stock) {
+  const controlaStock = item.ControlaStock !== undefined ? item.ControlaStock : true;
+  if (controlaStock && !window.PERMITIR_STOCK_NEGATIVO && ((totalFisicoOtros + (nuevaCant * factor)) > item.Stock)) {
     toast(`Stock máximo disponible: ${item.Stock} unidades (${Math.floor(item.Stock / factor)} packs)`, 'warn');
     return;
   }
@@ -1085,7 +1118,8 @@ function abrirModalPago() {
   const otroPropina = document.getElementById('propinaOtroInput');
   if (otroPropina) otroPropina.value = '';
   actualizarTotalesPago();
-  document.getElementById('montoRecibidoModal').value = getCartTotal() + getPropina();
+  const baseCobro = getCartTotal() + getPropina();
+  document.getElementById('montoRecibidoModal').value = baseCobro + getRedondeoEfectivo(baseCobro);
   calcularVueltoModal();
 
   const modal = document.getElementById('pagoModal');
@@ -1113,11 +1147,13 @@ function setFormaPago(metodo, btn) {
   // La propina no aplica a crédito/puntos: se oculta y se recalcula el total.
   const bloqueProp = document.getElementById('bloquePropina');
   if (bloqueProp) bloqueProp.style.opacity = ['Credito', 'Puntos'].includes(metodo) ? '0.4' : '';
-  if (window.PROPINA_ACTIVA) { actualizarTotalesPago(); calcularVueltoModal(); }
+  actualizarTotalesPago();
+  calcularVueltoModal();
 }
 
 function setMontoQuick(val) {
-  const total = getCartTotal() + getPropina();
+  const baseCobro = getCartTotal() + getPropina();
+  const total = baseCobro + getRedondeoEfectivo(baseCobro);
   const input = document.getElementById('montoRecibidoModal');
   if (val === 'exacto') {
     input.value = total;
@@ -1128,7 +1164,8 @@ function setMontoQuick(val) {
 }
 
 function calcularVueltoModal() {
-  const total = getCartTotal() + getPropina();
+  const baseCobro = getCartTotal() + getPropina();
+  const total = baseCobro + getRedondeoEfectivo(baseCobro);
   const recibido = parseInt(document.getElementById('montoRecibidoModal').value) || 0;
   const vueltoEl = document.getElementById('vueltoModal');
 
@@ -1190,9 +1227,11 @@ async function confirmarPagoModal() {
   }
 
   let pagos = [];
-  // Propina voluntaria: se cobra junto con la venta pero no forma parte de ella (ni de la boleta).
+  // Propina voluntaria y regla de redondeo en efectivo (Ley 20.956)
   const propina = getPropina();
-  const totalCobrar = total + propina;
+  const baseCobro = total + propina;
+  const redondeo = getRedondeoEfectivo(baseCobro);
+  const totalCobrar = baseCobro + redondeo;
   let recibido = totalCobrar;
   let vuelto = 0;
 
@@ -1277,6 +1316,7 @@ async function confirmarPagoModal() {
     mostrarTicket(data, cart, total, recibido, vuelto, pagosTicket, {
       subtotal: Math.round(subtotalBruto),
       descuento: Math.round(descPromos) + descGlobal,
+      redondeo: data.redondeo !== undefined ? data.redondeo : redondeo
     });
 
     cart = [];
@@ -1382,6 +1422,7 @@ async function cargarCotizacion(id) {
       Nombre: d.Nombre,
       PrecioVenta: parseInt(d.PrecioUnitario),
       Stock: parseFloat(d.Stock),
+      ControlaStock: (d.ControlaStock !== undefined && d.ControlaStock !== null) ? (parseInt(d.ControlaStock) === 1) : true,
       cantidad: parseFloat(d.Cantidad),
       PromocionID: d.PromocionID || null,
       PromoTipo: d.PromoTipo || null,
@@ -1496,6 +1537,20 @@ function mostrarTicket(data, items, total, pagado, vuelto, pagos, meta) {
     boxPropina.style.display = propinaTk > 0 ? 'block' : 'none';
     document.getElementById('ticketPropina').textContent = `$${formatNumber(propinaTk)}`;
     document.getElementById('ticketTotalPagado').textContent = `$${formatNumber(total + propinaTk)}`;
+  }
+
+  // Redondeo Ley 20.956 (pago en efectivo)
+  const redTk = parseInt(data.redondeo) || (meta && parseInt(meta.redondeo)) || 0;
+  const boxRedondeo = document.getElementById('ticketRedondeoBox');
+  if (boxRedondeo) {
+    if (redTk !== 0) {
+      boxRedondeo.style.display = 'block';
+      const difTxt = redTk > 0 ? `+$${formatNumber(redTk)}` : `-$${formatNumber(Math.abs(redTk))}`;
+      document.getElementById('ticketRedondeo').textContent = difTxt;
+      document.getElementById('ticketTotalEfectivo').textContent = `$${formatNumber(total + propinaTk + redTk)}`;
+    } else {
+      boxRedondeo.style.display = 'none';
+    }
   }
 
   const pagosEl = document.getElementById('ticketPagos');

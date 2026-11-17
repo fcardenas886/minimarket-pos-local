@@ -74,3 +74,21 @@ function generarCierreZ(PDO $pdo, int $cajaID, int $usuarioID): array {
 
     return ['numeroZ' => $nextZ, 'reporteZID' => $reporteZID, 'total' => (int)$tot['Total']];
 }
+
+/**
+ * Regla de redondeo de la Ley N° 20.956 (Chile) para pagos en efectivo:
+ * - Cantidades terminadas en 1 a 5 pesos se redondean a la decena inferior (-1 a -5).
+ * - Cantidades terminadas en 6 a 9 pesos se redondean a la decena superior (+4 a +1).
+ * - Cantidades terminadas en 0 no sufren variación.
+ * Devuelve la diferencia a aplicar (+ o -).
+ */
+function calcularRedondeoLey20956(int $monto): int {
+    $unidad = $monto % 10;
+    if ($unidad >= 1 && $unidad <= 5) {
+        return -$unidad;
+    } elseif ($unidad >= 6 && $unidad <= 9) {
+        return 10 - $unidad;
+    }
+    return 0;
+}
+

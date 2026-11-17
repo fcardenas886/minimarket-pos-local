@@ -11,3 +11,4 @@ config/clave_cifrado.key
 config/eboleta_sesion.json
 # Logos y archivos subidos por cada negocio (datos, no código)
 uploads/
+publicidad/_herramientas/tmp/

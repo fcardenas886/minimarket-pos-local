@@ -68,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmtVentas = $pdo->prepare("
                 SELECT 
                     COALESCE(SUM(CASE WHEN p.MetodoPago = 'Efectivo' THEN p.Monto ELSE 0 END), 0) AS total_efectivo,
-                    COALESCE(SUM(CASE WHEN p.MetodoPago IN ('Tarjeta Debito', 'Tarjeta Credito') THEN p.Monto ELSE 0 END), 0) AS total_tarjeta,
+                    COALESCE(SUM(CASE WHEN p.MetodoPago IN ('Tarjeta Debito', 'Tarjeta Credito', 'Tarjeta') THEN p.Monto ELSE 0 END), 0) AS total_tarjeta,
                     COALESCE(SUM(CASE WHEN p.MetodoPago = 'Transferencia' THEN p.Monto ELSE 0 END), 0) AS total_transferencia,
                     COALESCE(SUM(CASE WHEN p.MetodoPago = 'Vale Devolucion' THEN p.Monto ELSE 0 END), 0) AS total_vales
                 FROM ventas v
@@ -179,7 +179,7 @@ if ($turnoActivo) {
     $stmtV = $pdo->prepare("
         SELECT 
             COALESCE(SUM(CASE WHEN p.MetodoPago = 'Efectivo' THEN p.Monto ELSE 0 END), 0) AS total_efectivo,
-            COALESCE(SUM(CASE WHEN p.MetodoPago IN ('Tarjeta Debito', 'Tarjeta Credito') THEN p.Monto ELSE 0 END), 0) AS total_tarjeta,
+            COALESCE(SUM(CASE WHEN p.MetodoPago IN ('Tarjeta Debito', 'Tarjeta Credito', 'Tarjeta') THEN p.Monto ELSE 0 END), 0) AS total_tarjeta,
             COALESCE(SUM(CASE WHEN p.MetodoPago = 'Transferencia' THEN p.Monto ELSE 0 END), 0) AS total_transferencia,
             COALESCE(SUM(CASE WHEN p.MetodoPago = 'Vale Devolucion' THEN p.Monto ELSE 0 END), 0) AS total_vales,
             COUNT(DISTINCT v.VentaID) AS total_ventas

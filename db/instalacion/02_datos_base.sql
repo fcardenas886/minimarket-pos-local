@@ -94,3 +94,9 @@ INSERT INTO `configuraciones` (`Clave`, `Valor`, `Descripcion`) VALUES
   ('PROPINA_PORCENTAJE', '10', 'Porcentaje de propina sugerida');
 
 SET FOREIGN_KEY_CHECKS = 1;
+
+INSERT INTO `configuraciones` (`Clave`, `Valor`, `Descripcion`) VALUES
+  ('REDONDEO_LEY_ACTIVO', 'true', 'Aplicar regla de redondeo (Ley 20.956) en pagos en efectivo'),
+  ('UPDATE_CHECK_URL', '', 'URL remota del archivo version.json para comprobar actualizaciones'),
+  ('UPDATE_MODO', 'preguntar', 'Modo de actualizacion: preguntar, automatica o desactivada'),
+  ('UPDATE_ULTIMA_REVISION', '', 'Fecha y hora de la ultima comprobacion de actualizaciones');

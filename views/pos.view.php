@@ -329,6 +329,7 @@
           <span style="font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">TOTAL A COBRAR</span>
           <div id="modalMontoTotal" style="font-size: 2.5rem; font-weight: 800; color: var(--success); font-family: monospace;">$0</div>
           <div id="modalDesglosePropina" style="display: none; font-size: 0.82rem; color: var(--text-muted);"></div>
+          <div id="modalDesgloseRedondeo" style="display: none; font-size: 0.82rem; color: var(--success); font-weight: 600; margin-top: 0.25rem;"></div>
         </div>
       </div>
 
@@ -494,6 +495,10 @@
       <div id="ticketPropinaBox" style="display: none;">
         <div class="tk-row"><span>Propina (voluntaria)</span><span id="ticketPropina"></span></div>
         <div class="tk-row tk-strong"><span>Total pagado</span><span id="ticketTotalPagado"></span></div>
+      </div>
+      <div id="ticketRedondeoBox" style="display: none;">
+        <div class="tk-row"><span>Redondeo Ley 20.956</span><span id="ticketRedondeo"></span></div>
+        <div class="tk-row tk-strong"><span>Total en efectivo</span><span id="ticketTotalEfectivo"></span></div>
       </div>
 
       <div class="tk-sep"></div>
@@ -707,6 +712,8 @@ async function ejecutarConsultaPrecio() {
   window.MESAS_IMPRIMIR_COMANDA = <?= json_encode($mesasImprimirComanda ?? 'SI') ?>;
   window.PROPINA_ACTIVA = <?= !empty($propinaActiva) ? 'true' : 'false' ?>;
   window.PROPINA_PORCENTAJE = <?= (int)($propinaPorcentaje ?? 10) ?>;
+  window.PERMITIR_STOCK_NEGATIVO = <?= !empty($permitirStockNegativo) ? 'true' : 'false' ?>;
+  window.REDONDEO_LEY_ACTIVO = <?= !empty($redondeoLeyActivo) ? 'true' : 'false' ?>;
   window.CURRENT_USER_ROL = "<?= htmlspecialchars($user['rol'] ?? 'Cajero') ?>";
   window.CURRENT_USER_NAME = "<?= htmlspecialchars($user['nombre'] ?? '') ?>";
   window.POS_DISENO_GRID_DEFAULT = "<?= htmlspecialchars($posDisenoGridDefault ?? 'estandar') ?>";

@@ -21,7 +21,7 @@ try {
     $stmtV = $pdo->prepare("
         SELECT v.VentaID, v.TurnoID, v.ClienteID, v.FechaVenta, v.TipoDocumento, v.TipoDte, 
                v.Folio, v.MontoNeto, v.MontoIva, v.MontoExento, v.DescuentoGlobal, 
-               v.MontoTotal, v.MontoPagado, v.Vuelto, v.PuntosGanados, v.PuntosCanjeados, 
+               v.MontoTotal, v.Propina, v.Redondeo, v.MontoPagado, v.Vuelto, v.PuntosGanados, v.PuntosCanjeados, 
                v.Estado, v.DtePdfPath,
                u.Nombre AS CajeroNombre, u.UsuarioID AS CajeroID,
                c.Nombre AS ClienteNombre, c.RutCuerpo, c.RutDv, c.Telefono AS ClienteTelefono, 
@@ -194,6 +194,8 @@ try {
             'monto_exento' => (int)$venta['MontoExento'],
             'descuento_global' => (int)$venta['DescuentoGlobal'],
             'total' => (int)$venta['MontoTotal'],
+            'propina' => (int)($venta['Propina'] ?? 0),
+            'redondeo' => (int)($venta['Redondeo'] ?? 0),
             'pagado' => (int)$venta['MontoPagado'],
             'vuelto' => (int)$venta['Vuelto'],
             'puntos_ganados' => (int)$venta['PuntosGanados'],

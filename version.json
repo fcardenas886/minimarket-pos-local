@@ -1,0 +1,16 @@
+{
+    "version": "v4.2.0",
+    "fecha": "2026-11-17",
+    "archivo": "MinimarketPOS-Setup-4.2.0.exe",
+    "tamano_mb": 47.4,
+    "sha256": "21195da3a5e19222e0f09125dd6a984386cbbe6feb567e3f79de6ce8932cab3e",
+    "url": "https://github.com/fcardenas886/minimarket-pos-local/releases/download/v4.2.0/MinimarketPOS-Setup-4.2.0.exe",
+    "obligatoria": false,
+    "novedades": [
+        "Ley de Redondeo en Efectivo (Ley N° 20.956): cálculo y desglose automático de diferencias (-$5 a +$4 CLP) en pagos en efectivo en caja POS y comprobantes impresos.",
+        "Sistema de Actualizaciones Remotas Automáticas: detección y aplicación silenciosa de nuevas versiones al abrir el programa, sin visitas presenciales.",
+        "Soporte completo para productos sin control de stock (servicios, recargas y preparación) con venta ilimitada en terminales POS.",
+        "Corrección en auditoría de fiados y cartera de clientes en el centro de reportes.",
+        "Anulación segura de ventas con reversión atómica de saldos deudores, puntos acumulados y vales de cambio."
+    ]
+}

@@ -73,5 +73,9 @@ $categorias = $pdo->query("SELECT CategoriaID, Nombre FROM categorias ORDER BY N
 // Cotización a cargar automáticamente en el carrito (viene de la pantalla de Cotizaciones)
 $cotizacionPreload = (int)($_GET['cotizacion'] ?? 0);
 
+// Control de inventario y regla de redondeo
+$permitirStockNegativo = $pdo->query("SELECT Valor FROM configuraciones WHERE Clave = 'PERMITIR_STOCK_NEGATIVO'")->fetchColumn() === 'true';
+$redondeoLeyActivo = ($pdo->query("SELECT Valor FROM configuraciones WHERE Clave = 'REDONDEO_LEY_ACTIVO'")->fetchColumn() ?: 'true') !== 'false';
+
 include __DIR__ . '/views/pos.view.php';
 require_once __DIR__ . '/includes/footer.php';

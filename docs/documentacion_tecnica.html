@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Documentación técnica — Minimarket POS v4.1.0</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm 18mm 16mm;
+    @bottom-center { content: "Minimarket POS · Documentación técnica v4.1.0 · página " counter(page) " de " counter(pages); font: 8pt Arial, sans-serif; color: #777; } }
+  @page :first { @bottom-center { content: none; } }
+  :root { --c1: #4f46e5; --c2: #312e81; --gris: #6b7280; --borde: #e5e7eb; --fondo: #f8f9fc; --ok: #047857; --warn: #b45309; --mal: #b91c1c; }
+  * { box-sizing: border-box; }
+  body { font: 10.2pt/1.5 "Segoe UI", Arial, sans-serif; color: #1f2430; margin: 0; }
+  h1, h2, h3 { color: var(--c2); line-height: 1.25; }
+  h2 { font-size: 17pt; border-bottom: 3px solid var(--c1); padding-bottom: 4px; margin: 26px 0 12px; }
+  h2.nueva { page-break-before: always; break-before: page; margin-top: 0; }
+  h3 { font-size: 12.5pt; margin: 18px 0 6px; }
+  /* Un título nunca queda solo al final de una página. */
+  h2, h3, h4 { page-break-after: avoid; break-after: avoid; }
+  h2 + *, h3 + *, h4 + * { page-break-before: avoid; break-before: avoid; }
+  .junto { page-break-inside: avoid; break-inside: avoid; }
+  h4 { font-size: 10.5pt; margin: 12px 0 4px; color: #374151; }
+  p { margin: 5px 0 8px; }
+  ul, ol { margin: 4px 0 8px 18px; padding: 0; }
+  li { margin: 2px 0; }
+  code { font-family: Consolas, "Courier New", monospace; font-size: 8.8pt; background: #eef0f7; padding: 1px 4px; border-radius: 3px; }
+  pre { font-family: Consolas, "Courier New", monospace; font-size: 8.4pt; line-height: 1.4; background: #1e2235; color: #e6e9f2; padding: 9px 11px; border-radius: 6px; white-space: pre-wrap; word-break: break-word; margin: 6px 0 10px; page-break-inside: avoid; }
+  pre .c { color: #8b93b0; } pre .k { color: #a5b4fc; } pre .s { color: #86efac; } pre .n { color: #fcd34d; }
+  table { width: 100%; border-collapse: collapse; margin: 6px 0 12px; font-size: 9.2pt; page-break-inside: avoid; }
+  th { background: var(--c1); color: #fff; text-align: left; padding: 5px 7px; font-weight: 600; }
+  td { padding: 5px 7px; border-bottom: 1px solid var(--borde); vertical-align: top; }
+  tr:nth-child(even) td { background: #fafbff; }
+  .ejemplo { border: 1.5px solid #c7d2fe; background: #f5f7ff; border-radius: 8px; padding: 9px 12px 6px; margin: 10px 0 14px; page-break-inside: avoid; }
+  .ejemplo > .tit { font-weight: 700; color: var(--c1); font-size: 9.5pt; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+  .ejemplo > .tit::before { content: "💡 "; }
+  .nota { border-left: 4px solid var(--warn); background: #fffbeb; padding: 7px 11px; margin: 8px 0 12px; font-size: 9.5pt; page-break-inside: avoid; }
+  .bien { border-left: 4px solid var(--ok); background: #ecfdf5; padding: 7px 11px; margin: 8px 0 12px; font-size: 9.5pt; page-break-inside: avoid; }
+  figure { margin: 10px 0 14px; text-align: center; page-break-inside: avoid; }
+  figure img { max-width: 100%; border: 1px solid var(--borde); border-radius: 6px; }
+  figcaption { font-size: 8.6pt; color: var(--gris); margin-top: 4px; }
+  .fila { display: flex; gap: 12px; align-items: flex-start; }
+  .fila > * { flex: 1; }
+  .pill { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 8.5pt; font-weight: 600; }
+  .p-ok { background: #d1fae5; color: var(--ok); } .p-w { background: #fef3c7; color: var(--warn); } .p-m { background: #fee2e2; color: var(--mal); } .p-i { background: #e0e7ff; color: var(--c2); }
+  .ticket { font-family: "Courier New", monospace; font-size: 8.5pt; background: #fff; border: 1px dashed #999; padding: 8px 10px; width: 66mm; margin: 6px auto; line-height: 1.35; }
+  .ticket .r { display: flex; justify-content: space-between; }
+  .ticket .c { text-align: center; } .ticket .b { font-weight: bold; } .ticket hr { border: 0; border-top: 1px dashed #000; margin: 4px 0; }
+  svg text { font-family: "Segoe UI", Arial, sans-serif; }
+  /* Portada */
+  .portada { height: 255mm; display: flex; flex-direction: column; justify-content: center; text-align: center; }
+  .portada img { width: 34mm; margin: 0 auto 10mm; }
+  .portada h1 { font-size: 30pt; margin: 0 0 4mm; color: var(--c2); }
+  .portada .sub { font-size: 14pt; color: var(--c1); margin-bottom: 14mm; }
+  .portada .meta { font-size: 10pt; color: var(--gris); line-height: 1.8; }
+  .indice { columns: 2; column-gap: 10mm; font-size: 10pt; }
+  .indice div { break-inside: avoid; margin: 2px 0; }
+  .indice b { color: var(--c1); display: inline-block; width: 7mm; }
+</style>
+</head>
+<body>
+
+<!-- ================================================================ PORTADA -->
+<section class="portada">
+  <img src="img/icono.png" alt="">
+  <h1>Minimarket POS</h1>
+  <div class="sub">Documentación técnica — edición local</div>
+  <div class="meta">
+    Versión del sistema: <b>v4.1.0</b><br>
+    Repositorio: <code>fcardenas886/minimarket-pos-local</code> (privado)<br>
+    Público: equipo de desarrollo, soporte e implementación<br>
+    Noviembre 2026
+  </div>
+</section>
+
+<!-- ================================================================ ÍNDICE -->
+<h2 class="nueva">Contenido</h2>
+<div class="indice">
+  <div><b>1</b> Qué es el sistema</div>
+  <div><b>2</b> Metodología de trabajo</div>
+  <div><b>3</b> Tecnologías y por qué</div>
+  <div><b>4</b> Arquitectura</div>
+  <div><b>5</b> Estructura del proyecto</div>
+  <div><b>6</b> Componentes principales</div>
+  <div><b>7</b> Comunicación entre componentes</div>
+  <div><b>8</b> Base de datos y migraciones</div>
+  <div><b>9</b> Seguridad</div>
+  <div><b>10</b> Entorno de desarrollo</div>
+  <div><b>11</b> Compilación, versionado y entrega</div>
+  <div><b>12</b> Operación y soporte</div>
+  <div><b>13</b> Riesgos y deuda técnica</div>
+  <div><b>14</b> Glosario</div>
+</div>
+<p style="margin-top: 10mm;">Este documento acompaña a <code>DOCUMENTACION_TECNICA.md</code> del repositorio, con el mismo contenido más <b>ejemplos</b>, <b>diagramas</b> y <b>capturas reales</b> del sistema. Los datos de los ejemplos son ficticios (negocio de prueba, RUT y contraseñas inventados).</p>
+<div class="nota"><b>Cómo leer los ejemplos:</b> los recuadros azules marcados con 💡 muestran el concepto aplicado a un caso concreto; los bloques oscuros son código, comandos o datos tal como aparecen en el sistema.</div>
+
+<!-- ================================================================ 1 -->
+<h2 class="nueva">1. Qué es el sistema</h2>
+<p>Punto de venta para comercios chilenos pequeños (almacenes, minimarkets, botillerías y, con un módulo extra, locales de comida). Se <b>instala en el computador del cliente</b> como un programa de Windows y funciona sin internet, salvo para emitir boletas electrónicas.</p>
+<p>Existe además un <b>POS online</b> (otro producto). Esta edición local está recortada a propósito para no competir con él:</p>
+<table>
+  <tr><th></th><th>Básico (local)</th><th>Comercio (local)</th><th>POS online</th></tr>
+  <tr><td>POS, caja, ventas, boleta e-Boleta</td><td>✅</td><td>✅</td><td>✅</td></tr>
+  <tr><td>Productos, stock simple, reportes de ventas</td><td>✅</td><td>✅</td><td>✅</td></tr>
+  <tr><td>Fiados, devoluciones, compras, kardex, inventario, promociones, actualizador de precios</td><td>—</td><td>✅</td><td>✅</td></tr>
+  <tr><td>Usuarios (sin contar garzones)</td><td>2</td><td>3</td><td>Sin límite</td></tr>
+  <tr><td>Supervisor, utilidades, varias cajas o sucursales, factura</td><td>—</td><td>—</td><td>✅</td></tr>
+</table>
+<p><b>Módulo extra</b> (se vende aparte y se suma a cualquier plan): <b>Mesas y garzones</b> — pedidos desde celular o tablet, pantalla de cocina y comandas impresas.</p>
+<p><b>Modelo comercial:</b> licencia <b>de por vida</b> ligada al RUT del negocio, con <b>actualizaciones incluidas por un período</b>. Los cambios posteriores del SII se cobran como renovación de soporte.</p>
+
+<div class="ejemplo">
+  <div class="tit">Ejemplo: tres clientes, tres configuraciones</div>
+  <table>
+    <tr><th>Cliente</th><th>Licencia</th><th>Lo que ve</th></tr>
+    <tr><td>Kiosco "Don Pedro", atiende solo</td><td>Básico</td><td>POS, caja, productos, boleta. Hasta 2 usuarios.</td></tr>
+    <tr><td>Almacén de barrio con libreta de fiados</td><td>Comercio</td><td>Además: Clientes y fiado, Compras, Kardex, Promociones…</td></tr>
+    <tr><td>Almacén en invierno + picada en verano</td><td>Comercio + <span class="pill p-i">Mesas</span></td><td>Además: botón Mesas en caja, pantallas de garzón y cocina, propina.</td></tr>
+  </table>
+</div>
+
+<!-- ================================================================ 2 -->
+<h2>2. Metodología de trabajo</h2>
+<p>El proyecto se desarrolla de forma <b>iterativa e incremental</b>: entregas pequeñas, cada una usable, probada y versionada. Cada fase se acordó con el dueño del producto antes de construirla (plan local → licencias → boleta → instalador → mesas → propina).</p>
+
+<h3>2.1 Ciclo de cada cambio</h3>
+<ol>
+  <li><b>Acordar el alcance:</b> qué plan lo incluye y qué queda para el online.</li>
+  <li><b>Revisar el código existente</b> y reutilizar (ej.: "Pausar venta" usa la API de cotizaciones; el stock simple usa las tablas de ajustes del kardex).</li>
+  <li><b>Implementar</b> con cambios mínimos y comentarios en español que expliquen el <i>por qué</i>.</li>
+  <li><b>Probar de verdad</b>, no solo "compila" (ver tabla).</li>
+  <li><b>Revisar seguridad</b> antes del commit: que no viajen <code>.env</code>, licencias, llaves ni datos de clientes.</li>
+  <li><b>Versionar:</b> subir la versión, escribir novedades, compilar el instalador, commit y etiqueta.</li>
+</ol>
+
+<div class="ejemplo">
+  <div class="tit">Ejemplo: cómo se probó la boleta electrónica</div>
+  <table>
+    <tr><th>Nivel</th><th>Prueba real realizada</th></tr>
+    <tr><td>Sintaxis</td><td><code>php -l</code> y <code>node --check</code> de cada archivo tocado.</td></tr>
+    <tr><td>Unidad</td><td>Firma SigV4 comparada con los <b>vectores oficiales de AWS</b> (<code>get-vanilla</code>, <code>post-vanilla</code>): coinciden.</td></tr>
+    <tr><td>Lógica</td><td>Armado del detalle con descuento global, granel, pack y exento: la suma siempre igual al total cobrado.</td></tr>
+    <tr><td>Escenarios</td><td>Simulador: emisión correcta, sin internet, sin respuesta, rechazo, venta anulada, sin licencia.</td></tr>
+    <tr><td>Integración</td><td>Venta real desde el POS en el navegador, ticket, filtro de Ventas, reintento manual.</td></tr>
+    <tr><td>Validación</td><td>Peticiones inválidas a propósito: doble cobro, sin token, propina a crédito… todas rechazadas sin dejar datos a medias.</td></tr>
+  </table>
+</div>
+
+<h3>2.2 Ramas y versiones</h3>
+<ul>
+  <li>Rama principal <code>master</code>. Cada versión publicada lleva una <b>etiqueta</b> (<code>v4.0.0</code>, <code>v4.1.0</code>).</li>
+  <li><b>Versionado semántico</b> <code>MAYOR.MENOR.PARCHE</code>: MAYOR = cambio de edición o incompatible; MENOR = funciones nuevas compatibles; PARCHE = correcciones.</li>
+  <li>Recomendado al crecer el equipo: una rama por cambio (<code>feature/…</code>, <code>fix/…</code>) y <i>pull request</i> con revisión antes de unir.</li>
+</ul>
+<div class="ejemplo">
+  <div class="tit">Ejemplo: historial real del repositorio</div>
+<pre><span class="n">b736da7</span> <span class="k">(tag: v4.1.0)</span> v4.1.0: propina voluntaria y comprobante que se puede cerrar
+<span class="n">97e24cb</span> <span class="k">(tag: v4.0.0)</span> v4.0.0: edición local con licencias, e-Boleta, instalador y módulo Mesas
+<span class="n">5e3a614</span>               Seguridad interna en Caja/Ventas, CSRF en Productos/Promociones y POS reordenado</pre>
+  <p>La v4.0.0 es MAYOR (nace la edición local); la v4.1.0 es MENOR (agrega la propina sin romper nada).</p>
+</div>
+
+<h3>2.3 Convenciones</h3>
+<ul>
+  <li><b>Idioma:</b> código de negocio, comentarios, mensajes y commits en <b>español</b> (el dominio es chileno: RUT, boleta, SII, fiado).</li>
+  <li><b>Mensajes al usuario</b> en lenguaje simple: qué pasó y qué hacer.</li>
+  <li><b>Base de datos:</b> todo cambio va en una migración numerada nueva; nunca se edita una ya publicada.</li>
+</ul>
+
+<!-- ================================================================ 3 -->
+<h2>3. Tecnologías y por qué se eligieron</h2>
+<table>
+  <tr><th style="width: 18%;">Capa</th><th style="width: 22%;">Tecnología</th><th>Por qué</th></tr>
+  <tr><td>Lenguaje servidor</td><td><b>PHP 8.1</b>, sin framework</td><td>Ver 3.1.</td></tr>
+  <tr><td>Base de datos</td><td><b>MySQL 8</b> (InnoDB, utf8mb4)</td><td>Transacciones y bloqueo de filas (<code>FOR UPDATE</code>) para que dos ventas no descuenten el mismo stock ni dos garzones dupliquen una cuenta.</td></tr>
+  <tr><td>Servidor web</td><td><b>Apache 2.4</b> + <code>mod_php</code></td><td>Estándar en Windows; <code>.htaccess</code> protege carpetas; se instala como servicio.</td></tr>
+  <tr><td>Interfaz</td><td>HTML + CSS + <b>JavaScript sin framework</b></td><td>Sin paso de compilación; rápido en PCs modestos y pantallas táctiles.</td></tr>
+  <tr><td>Criptografía</td><td><b>OpenSSL</b></td><td>Firmas ECDSA de licencias y AES-256-GCM para la Clave Tributaria, sin extensiones extra.</td></tr>
+  <tr><td>HTTP saliente</td><td><b>cURL</b></td><td>Emisión de boletas con control de tiempos y clasificación de errores.</td></tr>
+  <tr><td>Instalador</td><td><b>Inno Setup 6</b></td><td>Gratuito y maduro; genera un <code>.exe</code> estándar con lógica para servicios, actualizaciones y desinstalación.</td></tr>
+  <tr><td>Desarrollo</td><td><b>Laragon</b></td><td>Mismo stack que el instalador, listo en Windows.</td></tr>
+  <tr><td>Versiones</td><td><b>Git + GitHub</b></td><td>Historial, etiquetas, respaldo del código.</td></tr>
+</table>
+
+<h3>3.1 ¿Por qué PHP y sin framework?</h3>
+<ul>
+  <li><b>El destino es el PC del cliente</b>, no un servidor administrado: hace falta un stack que se empaquete en ~25 MB y arranque solo como servicio de Windows.</li>
+  <li><b>Sin dependencias externas</b> en producción: nada que descargar al instalar ni librerías que se rompan.</li>
+  <li><b>Reutilización:</b> el sistema nace del POS existente en PHP.</li>
+  <li><b>Curva de aprendizaje baja:</b> cada pantalla es un archivo PHP con su vista.</li>
+  <li><b>Costo cero</b> en licencias y servidores.</li>
+</ul>
+<p>El costo de no usar framework es implementar a mano lo que este daría (CSRF, protección de rutas, migraciones). Está resuelto en <code>includes/auth.php</code>, <code>includes/licencia.php</code> e <code>instalador/configurar.php</code>.</p>
+
+<div class="ejemplo">
+  <div class="tit">Ejemplo: lo que hace un framework, resuelto en pocas líneas</div>
+  <p>La protección por licencia de <b>todas</b> las pantallas y APIs vive en un solo mapa. Agregar un script nuevo a un módulo es una línea:</p>
+<pre><span class="c">// includes/licencia.php</span>
+<span class="k">const</span> LICENCIA_SCRIPTS = [
+    <span class="s">'clientes.php'</span>          =&gt; <span class="s">'clientes'</span>,   <span class="c">// plan Comercio</span>
+    <span class="s">'actualizar_precios.php'</span> =&gt; <span class="s">'precios_rapidos'</span>,
+    <span class="s">'garzon.php'</span>            =&gt; <span class="s">'mesas'</span>,      <span class="c">// módulo extra</span>
+    <span class="s">'cotizaciones.php'</span>      =&gt; <span class="s">'cotizaciones'</span>, <span class="c">// solo POS online</span>
+];
+<span class="c">// includes/auth.php (lo cargan todas las pantallas y APIs)</span>
+proteger_acceso_red();
+licencia_proteger_script_actual();</pre>
+</div>
+
+<h3>3.2 ¿Por qué JavaScript sin framework?</h3>
+<p>Las pantallas son formularios y listas con interacción moderada. Un framework obligaría a compilar y mantener otro ecosistema; con JavaScript del navegador se consigue lo necesario y el código se lee directo.</p>
+
+<!-- ================================================================ 4 -->
+<h2>4. Arquitectura</h2>
+<h3>4.1 Vista general (instalación en el cliente)</h3>
+<figure>
+<svg viewBox="0 0 720 360" width="100%" xmlns="http://www.w3.org/2000/svg">
+  <defs><marker id="f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#4f46e5"/></marker></defs>
+  <rect x="10" y="10" width="440" height="340" rx="10" fill="#f5f7ff" stroke="#c7d2fe" stroke-width="2"/>
+  <text x="24" y="34" font-size="13" font-weight="700" fill="#312e81">PC de caja (Windows) — C:\MinimarketPOS</text>
+  <rect x="30" y="50" width="400" height="44" rx="6" fill="#fff" stroke="#9ca3af"/>
+  <text x="44" y="77" font-size="12">Navegador Edge en modo app (abrir.vbs)</text>
+  <rect x="30" y="122" width="400" height="58" rx="6" fill="#e0e7ff" stroke="#4f46e5"/>
+  <text x="44" y="145" font-size="12" font-weight="700">Servicio MinimarketPOS-Web</text>
+  <text x="44" y="164" font-size="11">Apache 2.4 + PHP 8.1 · puerto 8090</text>
+  <rect x="30" y="208" width="400" height="52" rx="6" fill="#ecfdf5" stroke="#047857"/>
+  <text x="44" y="230" font-size="12" font-weight="700">Servicio MinimarketPOS-DB</text>
+  <text x="44" y="248" font-size="11">MySQL 8 · 127.0.0.1:3307 (nunca expuesto a la red)</text>
+  <rect x="30" y="278" width="400" height="58" rx="6" fill="#fffbeb" stroke="#b45309"/>
+  <text x="44" y="300" font-size="12" font-weight="700">Tareas programadas (SYSTEM)</text>
+  <text x="44" y="318" font-size="11">emitir_pendientes.php c/2 min · respaldo.php 23:30</text>
+  <line x1="230" y1="94" x2="230" y2="120" stroke="#4f46e5" stroke-width="2" marker-end="url(#f)"/>
+  <line x1="230" y1="180" x2="230" y2="206" stroke="#4f46e5" stroke-width="2" marker-end="url(#f)"/>
+  <rect x="520" y="110" width="190" height="80" rx="8" fill="#fff" stroke="#9ca3af"/>
+  <text x="535" y="140" font-size="12" font-weight="700">SII e-Boleta (AWS)</text>
+  <text x="535" y="160" font-size="11">emisión de boletas</text>
+  <text x="535" y="176" font-size="11" fill="#6b7280">solo esto usa internet</text>
+  <line x1="432" y1="150" x2="518" y2="150" stroke="#4f46e5" stroke-width="2" marker-end="url(#f)"/>
+  <text x="446" y="142" font-size="10" fill="#4f46e5">HTTPS</text>
+  <rect x="520" y="240" width="190" height="96" rx="8" fill="#fff" stroke="#9ca3af"/>
+  <text x="535" y="266" font-size="12" font-weight="700">Celulares y tablets</text>
+  <text x="535" y="286" font-size="11">garzones y cocina</text>
+  <text x="535" y="304" font-size="10" fill="#6b7280">WiFi del local · solo</text>
+  <text x="535" y="318" font-size="10" fill="#6b7280">garzon.php, cocina.php, api/mesas.php</text>
+  <line x1="518" y1="270" x2="434" y2="160" stroke="#b45309" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#f)"/>
+  <text x="452" y="232" font-size="10" fill="#b45309">opcional</text>
+</svg>
+<figcaption>Figura 1. Componentes instalados en el PC de caja y sus conexiones.</figcaption>
+</figure>
+
+<h3>4.2 Patrón de cada pantalla</h3>
+<pre>pantalla.php                 → controlador: valida, consulta la base, prepara variables
+  ├─ includes/header.php      → sesión, licencia, menú (incluye auth.php)
+  ├─ views/pantalla.view.php  → solo presentación (HTML)
+  └─ includes/footer.php
+api/accion.php               → endpoint JSON para fetch(), valida CSRF
+assets/js/*.js               → interacción en el navegador</pre>
+
+<h3>4.3 Decisiones de diseño clave</h3>
+<table>
+  <tr><th style="width: 40%;">Decisión</th><th>Motivo</th></tr>
+  <tr><td>Protección por licencia en un solo punto</td><td>Todas las pantallas y APIs cargan <code>auth.php</code>; un mapa decide el módulo de cada script.</td></tr>
+  <tr><td>Boleta en <b>cola</b> (<code>dte_emitidos</code>)</td><td>La venta nunca se pierde por falta de internet.</td></tr>
+  <tr><td>Clasificar errores del SII</td><td>Reintentar solo cuando es seguro; nunca duplicar una boleta.</td></tr>
+  <tr><td>Propina <b>fuera</b> de la venta</td><td>No lleva IVA ni va en la boleta; se guarda aparte para la caja.</td></tr>
+  <tr><td>Migraciones numeradas + tabla <code>migraciones</code></td><td>Actualizar instalaciones sin perder datos.</td></tr>
+  <tr><td>Versión de CSS/JS por fecha de archivo</td><td>El navegador nunca usa una copia vieja tras actualizar.</td></tr>
+</table>
+
+<!-- ================================================================ 5 -->
+<h2>5. Estructura del proyecto</h2>
+<pre>/                          Pantallas (controladores): pos.php, caja.php, ventas.php, productos.php…
+├── garzon.php, cocina.php  Pantallas del módulo Mesas (celular / tablet / cocina)
+├── instalar.php            Asistente de primera instalación
+├── manifest.php, sw.js     App instalable (PWA) de garzón y cocina
+├── ver_boleta.php          Entrega el PDF de una boleta (requiere sesión)
+├── api/                    Endpoints JSON: registrar_venta, mesas, movimiento_stock…
+├── views/                  Vistas HTML de cada pantalla
+├── assets/                 css/, js/ (pos.js, mesas_caja.js, ui.js), img/, vendor/
+├── config/database.php     Conexión, APP_VERSION, novedades, asset_url(), zona horaria
+├── includes/
+│   ├── auth.php            Sesión, CSRF, contraseñas, protección de red y licencia
+│   ├── licencia.php        Licencias, planes, módulos, IP del equipo
+│   ├── qr.php              Generador de códigos QR sin dependencias
+│   ├── app_instalable.php  Instalar garzón/cocina como app
+│   └── sii/                EBoletaCliente.php, EBoletaCola.php, Cifrado.php
+├── db/migrations/          0001 … 0013 (cambios de esquema en orden)
+├── db/instalacion/         01_esquema.sql y 02_datos_base.sql (equipos nuevos)
+├── scripts/                emitir_pendientes.php, respaldo.php, restablecer_clave.php
+├── storage/boletas/        PDF de boletas (privado, no se versiona)
+├── instalador/             preparar, configurar, compilar, minimarket.iss, abrir.vbs
+└── tools/licencias/        HERRAMIENTA DEL PROVEEDOR (no se instala en clientes)</pre>
+<div class="nota"><b>Nunca se versionan:</b> <code>.env</code>, <code>config/licencia.lic</code>, <code>config/clave_cifrado.key</code>, <code>config/eboleta_sesion.json</code>, <code>config/instalado.lock</code>, <code>storage/boletas/</code>, <code>uploads/</code>, <code>instalador/paquete/</code>, <code>instalador/salida/</code>.</div>
+<p>Tamaño aproximado: ~20.600 líneas de PHP, ~2.500 de JavaScript, ~40 tablas, 13 migraciones.</p>
+
+<!-- ================================================================ 6 -->
+<h2>6. Componentes principales</h2>
+
+<h3>6.1 Autenticación y sesión — <code>includes/auth.php</code></h3>
+<ul>
+  <li>Roles: <b>Administrador</b>, <b>Supervisor</b>, <b>Cajero</b>, <b>Garzón</b>. <code>requireLogin()</code> y <code>checkRole()</code>.</li>
+  <li>Contraseñas con <code>password_hash</code>. <code>verificarPasswordUsuario()</code> acepta por única vez claves antiguas en texto plano y las convierte a hash.</li>
+  <li>CSRF: formularios con <code>csrfField()</code>/<code>verifyCsrf()</code>; APIs con cabecera <code>X-CSRF-Token</code> y <code>verifyCsrfApi()</code>.</li>
+  <li>Bloqueo por intentos fallidos de login (y de PIN de garzón) por IP.</li>
+  <li>Garzones: sesión separada (<code>$_SESSION['garzon']</code>), entran solo con PIN a garzón/cocina.</li>
+</ul>
+
+<h3>6.2 Licencias — <code>includes/licencia.php</code> y <code>tools/licencias/</code></h3>
+<p>Formato <code>MML1.&lt;datos base64url&gt;.&lt;firma&gt;</code>, firmado con <b>ECDSA P-256 / SHA-256</b>. El sistema trae solo la <b>clave pública</b>; la privada está en el PC del proveedor, fuera del repositorio. La licencia solo es válida si su RUT coincide con el del negocio.</p>
+<div class="ejemplo">
+  <div class="tit">Ejemplo: una licencia, por dentro</div>
+<pre><span class="c">// Texto que se entrega al cliente (acortado):</span>
+<span class="s">MML1.eyJ2IjoxLCJjbGllbnRlIjoiQWxtYWPDqW4gRG9uIFBlZHJvIi…</span>.<span class="n">MEUCIQC…</span>
+<span class="c">//    └ formato    └ datos (JSON en base64url)                 └ firma ECDSA</span>
+
+<span class="c">// Datos decodificados:</span>
+{ <span class="k">"cliente"</span>: <span class="s">"Almacén Don Pedro"</span>, <span class="k">"rut"</span>: <span class="s">"76123456-0"</span>, <span class="k">"plan"</span>: <span class="s">"comercio"</span>,
+  <span class="k">"extras"</span>: [<span class="s">"mesas"</span>], <span class="k">"actualizaciones_hasta"</span>: <span class="s">"2027-11-13"</span>, <span class="k">"emitida"</span>: <span class="s">"2026-11-13"</span> }</pre>
+  <table>
+    <tr><th>Situación</th><th>Resultado</th></tr>
+    <tr><td>Licencia correcta y RUT del negocio = 76.123.456-0</td><td><span class="pill p-ok">válida</span> plan Comercio + Mesas</td></tr>
+    <tr><td>Alguien cambia <code>"plan": "basico"</code> por <code>"comercio"</code></td><td><span class="pill p-m">rechazada</span> "La firma de la licencia no es válida"</td></tr>
+    <tr><td>Se copia la misma licencia a otro negocio (otro RUT)</td><td><span class="pill p-m">rechazada</span> "La licencia es para el RUT 76123456-0…"</td></tr>
+    <tr><td>Sin licencia</td><td><span class="pill p-w">plan Básico</span> y no emite boletas</td></tr>
+  </table>
+</div>
+<figure>
+  <img src="img/panel_licencias.jpg" style="width: 75%;">
+  <figcaption>Figura 2. Panel personal de licencias del proveedor (<code>tools\licencias\abrir_panel.bat</code>): crear, copiar, renovar, subir de plan y activar módulos extra.</figcaption>
+</figure>
+
+<h3>6.3 Venta — <code>api/registrar_venta.php</code></h3>
+<p>Todo ocurre en <b>una transacción</b>:</p>
+<ol>
+  <li>Bloquea cada producto (<code>FOR UPDATE</code>) y <b>recalcula precios en el servidor</b> (no confía en el navegador); aplica promociones si el plan las incluye.</li>
+  <li>Valida descuento, vale, propina y que los pagos cubran <b>venta + propina</b>.</li>
+  <li>Inserta venta, detalle y pagos; descuenta stock y registra kardex (salvo productos sin control de stock).</li>
+  <li>Cierra la cuenta de mesa si corresponde; si ya estaba cerrada, <b>revierte todo</b> (evita doble cobro).</li>
+  <li><code>COMMIT</code>. Después encola y emite la boleta (límite de 12 s).</li>
+</ol>
+<div class="ejemplo">
+  <div class="tit">Ejemplo: petición y respuesta de una venta con propina</div>
+  <div class="fila">
+<pre><span class="c">// POST api/registrar_venta.php
+// Cabecera: X-CSRF-Token: …</span>
+{ <span class="k">"items"</span>: [{ <span class="k">"producto_id"</span>: <span class="n">13</span>,
+     <span class="k">"cantidad"</span>: <span class="n">4</span>, <span class="k">"factor"</span>: <span class="n">1</span> }],
+  <span class="k">"tipo_documento"</span>: <span class="s">"Boleta"</span>,
+  <span class="k">"descuento_global"</span>: <span class="n">0</span>,
+  <span class="k">"propina"</span>: <span class="n">1000</span>,
+  <span class="k">"pagos"</span>: [{ <span class="k">"metodo"</span>: <span class="s">"Efectivo"</span>,
+              <span class="k">"monto"</span>: <span class="n">11000</span> }],
+  <span class="k">"monto_pagado"</span>: <span class="n">20000</span>, <span class="k">"vuelto"</span>: <span class="n">9000</span> }</pre>
+<pre><span class="c">// Respuesta</span>
+{ <span class="k">"success"</span>: <span class="n">true</span>,
+  <span class="k">"venta_id"</span>: <span class="s">"114"</span>,
+  <span class="k">"total"</span>: <span class="n">10000</span>,
+  <span class="k">"propina"</span>: <span class="n">1000</span>,
+  <span class="k">"vuelto"</span>: <span class="n">9000</span>,
+  <span class="k">"dte"</span>: { <span class="k">"success"</span>: <span class="n">true</span>,
+           <span class="k">"estado"</span>: <span class="s">"Emitida"</span>,
+           <span class="k">"folio"</span>: <span class="n">9</span>,
+           <span class="k">"pdf_url"</span>: <span class="s">"ver_boleta.php?dte=…"</span> } }</pre>
+  </div>
+</div>
+
+<div class="junto">
+<h3>6.4 Boleta electrónica — <code>includes/sii/</code></h3>
+<table>
+  <tr><th style="width: 24%;">Archivo</th><th>Función</th></tr>
+  <tr><td><code>EBoletaCliente.php</code></td><td>Habla con e-Boleta del SII: login, credenciales temporales de AWS (Cognito), firma SigV4 propia, datos del emisor y emisión.</td></tr>
+  <tr><td><code>EBoletaCola.php</code></td><td>Cola sobre <code>dte_emitidos</code>: arma el detalle, emite, reintenta y guarda el PDF. Incluye <b>simulador</b>.</td></tr>
+  <tr><td><code>Cifrado.php</code></td><td>AES-256-GCM con llave propia del equipo para la Clave Tributaria y la sesión.</td></tr>
+</table>
+</div>
+<figure>
+<svg viewBox="0 0 720 150" width="100%" xmlns="http://www.w3.org/2000/svg">
+  <defs><marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#374151"/></marker></defs>
+  <g font-size="11.5" font-weight="700">
+    <rect x="10" y="50" width="100" height="40" rx="20" fill="#e0e7ff" stroke="#4f46e5"/><text x="60" y="75" text-anchor="middle">Pendiente</text>
+    <rect x="160" y="50" width="100" height="40" rx="20" fill="#e0e7ff" stroke="#4f46e5"/><text x="210" y="75" text-anchor="middle">Enviando</text>
+    <rect x="320" y="8" width="100" height="40" rx="20" fill="#d1fae5" stroke="#047857"/><text x="370" y="33" text-anchor="middle">Emitida</text>
+    <rect x="320" y="56" width="100" height="40" rx="20" fill="#fef3c7" stroke="#b45309"/><text x="370" y="81" text-anchor="middle">Revisar</text>
+    <rect x="320" y="104" width="100" height="40" rx="20" fill="#fee2e2" stroke="#b91c1c"/><text x="370" y="129" text-anchor="middle">Error</text>
+    <rect x="160" y="104" width="100" height="40" rx="20" fill="#f3f4f6" stroke="#6b7280"/><text x="210" y="129" text-anchor="middle">Anulada</text>
+  </g>
+  <g stroke="#374151" stroke-width="1.6" fill="none" marker-end="url(#g)">
+    <line x1="110" y1="70" x2="158" y2="70"/>
+    <line x1="260" y1="62" x2="318" y2="30"/>
+    <line x1="260" y1="72" x2="318" y2="76"/>
+    <line x1="260" y1="82" x2="318" y2="122"/>
+    <line x1="60" y1="90" x2="160" y2="120"/>
+    <path d="M200,50 C200,15 80,15 70,48"/>
+  </g>
+  <g font-size="10" fill="#374151">
+    <text x="430" y="32">folio recibido</text>
+    <text x="430" y="80">se envió sin respuesta clara → no se reenvía sola</text>
+    <text x="430" y="128">el SII rechazó los datos</text>
+    <text x="90" y="16">sin internet / problema general → vuelve a Pendiente</text>
+    <text x="16" y="140">venta anulada antes de emitir</text>
+  </g>
+</svg>
+<figcaption>Figura 3. Estados de una boleta en la cola.</figcaption>
+</figure>
+<div class="ejemplo">
+  <div class="tit">Ejemplo: corte de internet durante la tarde</div>
+  <table>
+    <tr><th>Hora</th><th>Qué pasa</th><th>Estado</th></tr>
+    <tr><td>15:02</td><td>Venta #210. El SII no responde en 12 s (sin internet). La venta se guarda y el ticket dice "Boleta en proceso…".</td><td><span class="pill p-w">Pendiente</span></td></tr>
+    <tr><td>15:04</td><td>La tarea de fondo intenta; sigue sin internet. Se detiene sin probar las demás.</td><td><span class="pill p-w">Pendiente</span></td></tr>
+    <tr><td>15:20</td><td>Ventas #211 y #212, igual.</td><td><span class="pill p-w">Pendiente</span></td></tr>
+    <tr><td>15:36</td><td>Vuelve internet. La tarea emite #210, #211, #212 <b>en orden</b>.</td><td><span class="pill p-ok">Emitida</span></td></tr>
+  </table>
+</div>
+<div class="ejemplo">
+  <div class="tit">Ejemplo: reparto del descuento global en la boleta</div>
+  <p>Venta de $10.750 con $1.000 de descuento global (total cobrado $9.750). El SII exige que la suma de los ítems sea igual al total, así que el descuento se reparte en proporción:</p>
+  <table>
+    <tr><th>Ítem</th><th>Cant. × precio</th><th>Descuento repartido</th><th>MontoItem</th></tr>
+    <tr><td>Aceite</td><td>2 × $2.990</td><td>$557</td><td>$5.423</td></tr>
+    <tr><td>Pan</td><td>1 × $1.500</td><td>$139</td><td>$1.361</td></tr>
+    <tr><td>Leche</td><td>3 × $1.090</td><td>$304</td><td>$2.966</td></tr>
+    <tr><td colspan="3"><b>Suma</b></td><td><b>$9.750</b> = total cobrado ✓</td></tr>
+  </table>
+</div>
+<div class="nota">⚠️ e-Boleta es la integración <b>no oficial</b> con el sistema gratuito del SII. Empresas con software propio certificado no pueden usarlo (el SII responde "Contribuyente no se encuentra autorizado"). Ver sección 13.</div>
+
+<h3>6.5 Mesas y garzones (módulo extra)</h3>
+<ul>
+  <li><code>api/mesas.php</code>: única API del módulo, con permisos separados (garzón con PIN / caja con sesión, solo desde el PC).</li>
+  <li><b>Concurrencia:</b> cada envío bloquea la fila de la mesa; dos garzones a la vez suman a la misma cuenta.</li>
+  <li>Cada envío es una <b>comanda</b>. La caja toma e imprime las nuevas en una operación atómica: cada comanda se imprime una sola vez.</li>
+  <li>Tablas: <code>mesas</code>, <code>mesapedidos</code> (cuenta), <code>comandas</code>, <code>mesapedidosdetalle</code>.</li>
+</ul>
+<div class="fila">
+  <figure><img src="img/garzon_pin.jpg" style="height: 92mm;"><figcaption>Figura 4. Garzón: ingreso con PIN y aviso para instalar la app.</figcaption></figure>
+  <figure><img src="img/garzon_mesas.jpg" style="height: 92mm;"><figcaption>Figura 5. Garzón: mesas por zona (verde = libre).</figcaption></figure>
+</div>
+<figure><img src="img/cocina.jpg" style="width: 70%;"><figcaption>Figura 6. Pantalla de cocina: comanda pendiente con tiempo de espera y "Lista".</figcaption></figure>
+
+<div class="ejemplo">
+  <div class="tit">Ejemplo: una mesa de principio a fin</div>
+  <ol>
+    <li>19:10 — Pedro (PIN) envía a <b>Terraza 2</b>: 2 empanadas "bien cocidas" + 1 bebida → comanda #31.</li>
+    <li>La cocina la ve al instante (aviso sonoro) y la caja la <b>imprime sola</b>:</li>
+  </ol>
+  <div class="ticket">
+    <div class="c b" style="font-size: 14pt;">Terraza 2</div>
+    <div class="c">Terraza · 19:10 · Pedro · #31</div><hr>
+    <div><b>2 x</b> Empanada de pino</div><div style="padding-left: 12px;"><i>&gt; bien cocidas</i></div>
+    <div><b>1 x</b> Bebida 500 ml</div>
+  </div>
+  <ol start="3">
+    <li>19:35 — Pedro agrega 2 postres → comanda #32, <b>misma cuenta</b>.</li>
+    <li>20:05 — En caja: botón <b>Mesas → Terraza 2 → Cobrar</b>. La cuenta se carga en el carrito con la propina sugerida propuesta.</li>
+    <li>Se cobra con boleta; la mesa queda <b>libre</b>. Si alguien intenta cobrarla de nuevo: "La cuenta de esta mesa ya fue cobrada".</li>
+  </ol>
+</div>
+<figure><img src="img/config_qr.jpg" style="width: 75%;"><figcaption>Figura 7. Configuración → Mesas y garzones: dirección correcta del PC y QR para que el celular la abra con la cámara.</figcaption></figure>
+
+<h3>6.6 Stock</h3>
+<ul>
+  <li>La venta descuenta y la anulación devuelve <b>en unidades físicas</b> (cantidad × factor del pack); el kardex registra cada movimiento.</li>
+  <li><b>Stock simple</b> (todos los planes): ingreso, merma y ajuste a conteo, usando las tablas de ajustes del kardex.</li>
+  <li>Productos con <code>ControlaStock = 0</code> (platos, servicios) no descuentan ni aparecen en alertas.</li>
+</ul>
+<div class="ejemplo">
+  <div class="tit">Ejemplo: ajuste a conteo</div>
+  <p>El sistema dice 8 aceites; al contar hay 6. En Productos → ± → "Ajustar a conteo" se escribe <b>6</b>: se registra una salida de 2 en el kardex con motivo "Ajuste a conteo físico" y el stock queda en 6.</p>
+</div>
+
+<h3>6.7 Propina voluntaria</h3>
+<p>Configurable (<code>PROPINA_ACTIVA</code>, <code>PROPINA_PORCENTAJE</code>). Se guarda en <code>ventas.Propina</code>; los pagos registran el dinero real recibido, así el <b>arqueo cuadra</b>; la boleta usa solo el total de la venta. No se permite a crédito/puntos ni mayor que el consumo.</p>
+<div class="fila">
+  <figure><img src="img/pago_propina.jpg"><figcaption>Figura 8. Pantalla de pago con propina sugerida.</figcaption></figure>
+  <div class="ejemplo" style="margin-top: 10px;">
+    <div class="tit">Ejemplo: los números</div>
+    <table>
+      <tr><td>Consumo (venta)</td><td><b>$10.000</b></td></tr>
+      <tr><td>Propina 10% sugerida</td><td>$1.000</td></tr>
+      <tr><td>Total a cobrar</td><td>$11.000</td></tr>
+      <tr><td>Paga con</td><td>$20.000 → vuelto $9.000</td></tr>
+      <tr><td>Pago registrado (caja)</td><td>Efectivo $11.000</td></tr>
+      <tr><td>Boleta al SII</td><td><b>$10.000</b> (sin propina)</td></tr>
+      <tr><td>Cierre de turno</td><td>"Propinas del turno: $1.000"</td></tr>
+    </table>
+  </div>
+</div>
+
+<h3>6.8 Instalador — <code>instalador/</code></h3>
+<table>
+  <tr><th style="width: 22%;">Archivo</th><th>Función</th></tr>
+  <tr><td><code>compilar.php</code></td><td>Un comando: lee <code>APP_VERSION</code>, arma el paquete y compila con Inno Setup.</td></tr>
+  <tr><td><code>preparar.php</code></td><td>Copia lo justo de PHP, Apache y MySQL + el sistema (sin herramientas, git ni datos).</td></tr>
+  <tr><td><code>configurar.php</code></td><td>Al instalar: configuraciones, MySQL, servicios, base y <code>.env</code> con contraseñas aleatorias, migraciones con respaldo previo, tareas y firewall. Idempotente; modo <code>--probar</code> sin administrador.</td></tr>
+  <tr><td><code>minimarket.iss</code></td><td>Inno Setup: servicios, accesos directos, actualización y desinstalación.</td></tr>
+  <tr><td><code>abrir.vbs</code></td><td>Abre el sistema en Edge modo app con impresión directa (<code>--kiosk-printing</code>).</td></tr>
+</table>
+<div class="ejemplo">
+  <div class="tit">Ejemplo: lo que deja el instalador en el equipo del cliente</div>
+<pre>C:\MinimarketPOS\
+├── app\            el sistema  (app\.env generado: DB_PORT=3307, DB_USER=minimarket, DB_PASS=&lt;aleatoria&gt;)
+├── php\  apache\  mysql\       componentes portables
+├── datos\mysql\    la base de datos          datos\instalacion.json  contraseñas de MySQL
+├── respaldos\      minimarket_local_2026-11-13_233000.sql.gz …
+└── logs\           instalacion.log, apache_error.log, php_error.log, mysql_error.log</pre>
+</div>
+
+<!-- ================================================================ 7 -->
+<h2>7. Comunicación entre componentes</h2>
+<h3>7.1 Navegador ↔ servidor</h3>
+<table>
+  <tr><th style="width: 24%;">Canal</th><th style="width: 28%;">Formato</th><th>Uso</th></tr>
+  <tr><td>Formularios HTML (POST)</td><td>form-urlencoded + <code>csrf_token</code></td><td>Configuración, productos, usuarios, caja.</td></tr>
+  <tr><td><code>fetch()</code> a <code>api/*.php</code></td><td>JSON + cabecera <code>X-CSRF-Token</code></td><td>Venta, búsqueda, mesas, stock, boletas. Respuesta <code>{ "success", "error", … }</code>.</td></tr>
+  <tr><td><i>Polling</i> (consulta periódica)</td><td>JSON</td><td>Garzón: mesas cada <b>10 s</b> · Cocina: comandas cada <b>5 s</b> · Caja: comandas nuevas cada <b>8 s</b>.</td></tr>
+</table>
+<p>Se eligió <i>polling</i> en vez de WebSockets: más simple, sin servicios adicionales y suficiente para un local.</p>
+<div class="ejemplo">
+  <div class="tit">Ejemplo: el garzón envía un pedido</div>
+<pre><span class="c">// POST api/mesas.php?action=enviar   (sesión de garzón + X-CSRF-Token)</span>
+{ <span class="k">"mesa_id"</span>: <span class="n">4</span>, <span class="k">"items"</span>: [ { <span class="k">"producto_id"</span>: <span class="n">13</span>, <span class="k">"cantidad"</span>: <span class="n">2</span>, <span class="k">"nota"</span>: <span class="s">"bien cocidas"</span> } ] }
+
+<span class="c">// Respuesta</span>
+{ <span class="k">"success"</span>: <span class="n">true</span>, <span class="k">"pedido_id"</span>: <span class="n">7</span>, <span class="k">"comanda_id"</span>: <span class="n">31</span>, <span class="k">"mesa"</span>: <span class="s">"Terraza 2"</span>, <span class="k">"total"</span>: <span class="n">5000</span>, <span class="k">"lineas"</span>: [ … ] }</pre>
+</div>
+
+<h3>7.2 Red del local</h3>
+<ul>
+  <li>Por defecto Apache escucha solo en <code>127.0.0.1</code>. Con "tablets y celulares" escucha en la red y se crea una regla de firewall <b>solo para redes privadas</b>.</li>
+  <li>Desde otros equipos solo responden <code>garzon.php</code>, <code>cocina.php</code> y <code>api/mesas.php</code>; el resto da 403.</li>
+  <li>MySQL siempre escucha solo en <code>127.0.0.1:3307</code>.</li>
+  <li><code>ips_del_equipo()</code> detecta la tarjeta que sale al router (no la de VirtualBox o VPN) y la muestra con QR.</li>
+</ul>
+<div class="ejemplo">
+  <div class="tit">Ejemplo: desde un celular del local (IP del PC: 192.168.1.196)</div>
+  <table>
+    <tr><th>Dirección pedida</th><th>Respuesta</th></tr>
+    <tr><td><code>http://192.168.1.196:8090/garzon.php</code></td><td><span class="pill p-ok">200</span> pantalla de garzón</td></tr>
+    <tr><td><code>http://192.168.1.196:8090/cocina.php</code></td><td><span class="pill p-ok">200</span> pantalla de cocina</td></tr>
+    <tr><td><code>http://192.168.1.196:8090/pos.php</code></td><td><span class="pill p-m">403</span> "Solo disponible en el computador de caja"</td></tr>
+    <tr><td><code>http://192.168.1.196:8090/.env</code></td><td><span class="pill p-m">403</span> archivo protegido</td></tr>
+  </table>
+</div>
+
+<div class="junto">
+<h3>7.3 Sistema ↔ SII (e-Boleta)</h3>
+<figure>
+<svg viewBox="0 0 720 230" width="100%" xmlns="http://www.w3.org/2000/svg">
+  <defs><marker id="h" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#4f46e5"/></marker>
+  <marker id="h2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#047857"/></marker></defs>
+  <g font-size="12" font-weight="700" text-anchor="middle">
+    <rect x="20" y="8" width="150" height="30" rx="6" fill="#e0e7ff" stroke="#4f46e5"/><text x="95" y="28">Minimarket POS</text>
+    <rect x="285" y="8" width="150" height="30" rx="6" fill="#fff" stroke="#9ca3af"/><text x="360" y="28">SII: /sign-in</text>
+    <rect x="550" y="8" width="150" height="30" rx="6" fill="#fff" stroke="#9ca3af"/><text x="625" y="28">AWS Cognito / API</text>
+  </g>
+  <g stroke="#cbd5e1" stroke-dasharray="4 4"><line x1="95" y1="38" x2="95" y2="225"/><line x1="360" y1="38" x2="360" y2="225"/><line x1="625" y1="38" x2="625" y2="225"/></g>
+  <g font-size="10.5">
+    <line x1="95" y1="62" x2="358" y2="62" stroke="#4f46e5" stroke-width="1.6" marker-end="url(#h)"/><text x="110" y="57">1. RUT persona + Clave Tributaria</text>
+    <line x1="360" y1="84" x2="97" y2="84" stroke="#047857" stroke-width="1.6" marker-end="url(#h2)"/><text x="120" y="79" fill="#047857">token Cognito + IdentityId</text>
+    <line x1="95" y1="112" x2="623" y2="112" stroke="#4f46e5" stroke-width="1.6" marker-end="url(#h)"/><text x="110" y="107">2. GetCredentialsForIdentity</text>
+    <line x1="625" y1="134" x2="97" y2="134" stroke="#047857" stroke-width="1.6" marker-end="url(#h2)"/><text x="120" y="129" fill="#047857">credenciales AWS temporales</text>
+    <line x1="95" y1="162" x2="623" y2="162" stroke="#4f46e5" stroke-width="1.6" marker-end="url(#h)"/><text x="110" y="157">3. info-emisor-usuario (firmado SigV4)</text>
+    <line x1="95" y1="194" x2="623" y2="194" stroke="#4f46e5" stroke-width="1.6" marker-end="url(#h)"/><text x="110" y="189">4. documentos/generar (firmado SigV4)</text>
+    <line x1="625" y1="216" x2="97" y2="216" stroke="#047857" stroke-width="1.6" marker-end="url(#h2)"/><text x="120" y="211" fill="#047857">folio + PDF (base64)</text>
+  </g>
+</svg>
+<figcaption>Figura 9. Secuencia de emisión. La sesión se guarda cifrada y se reutiliza hasta que vence.</figcaption>
+</figure>
+</div>
+
+<h3>7.4 Procesos de fondo</h3>
+<table>
+  <tr><th>Tarea</th><th>Frecuencia</th><th>Qué hace</th></tr>
+  <tr><td><code>scripts/emitir_pendientes.php</code></td><td>cada 2 min</td><td>Emite pendientes en orden; se detiene ante un problema general. Bloqueo de archivo: nunca dos a la vez.</td></tr>
+  <tr><td><code>scripts/respaldo.php</code></td><td>diario 23:30</td><td><code>mysqldump</code> comprimido, guarda 30 días; contraseña por variable de entorno.</td></tr>
+</table>
+
+<!-- ================================================================ 8 -->
+<h2>8. Base de datos y migraciones</h2>
+<ul>
+  <li><b>MySQL 8</b>, InnoDB, <code>utf8mb4_unicode_ci</code>. ~40 tablas.</li>
+  <li>Principales: <code>productos</code>, <code>productoscodigos</code>, <code>ventas</code>, <code>detalleventas</code>, <code>pagosventa</code>, <code>turnos</code>, <code>movimientoscaja</code>, <code>kardex</code>, <code>ajustesstock</code>, <code>dte_emitidos</code>, <code>configuraciones</code>, <code>usuarios</code>, <code>roles</code>, <code>mesas</code>, <code>mesapedidos</code>, <code>comandas</code>, <code>mesapedidosdetalle</code>.</li>
+  <li>La configuración del negocio vive en <code>configuraciones</code> (clave / valor).</li>
+</ul>
+<figure>
+<svg viewBox="0 0 720 200" width="100%" xmlns="http://www.w3.org/2000/svg">
+  <g font-size="11">
+    <g><rect x="10" y="20" width="140" height="70" rx="6" fill="#fff" stroke="#4f46e5"/><rect x="10" y="20" width="140" height="20" rx="6" fill="#4f46e5"/><text x="80" y="35" fill="#fff" text-anchor="middle" font-weight="700">turnos</text><text x="18" y="56">TurnoID, UsuarioID</text><text x="18" y="72">CajaID, Estado</text></g>
+    <g><rect x="200" y="20" width="160" height="90" rx="6" fill="#fff" stroke="#4f46e5"/><rect x="200" y="20" width="160" height="20" rx="6" fill="#4f46e5"/><text x="280" y="35" fill="#fff" text-anchor="middle" font-weight="700">ventas</text><text x="208" y="56">VentaID, TurnoID</text><text x="208" y="72">MontoTotal, Propina</text><text x="208" y="88">Folio, Estado</text></g>
+    <g><rect x="410" y="8" width="150" height="56" rx="6" fill="#fff" stroke="#4f46e5"/><rect x="410" y="8" width="150" height="20" rx="6" fill="#4f46e5"/><text x="485" y="23" fill="#fff" text-anchor="middle" font-weight="700">detalleventas</text><text x="418" y="44">ProductoID, Cantidad</text></g>
+    <g><rect x="410" y="76" width="150" height="50" rx="6" fill="#fff" stroke="#4f46e5"/><rect x="410" y="76" width="150" height="20" rx="6" fill="#4f46e5"/><text x="485" y="91" fill="#fff" text-anchor="middle" font-weight="700">pagosventa</text><text x="418" y="112">MetodoPago, Monto</text></g>
+    <g><rect x="410" y="138" width="150" height="56" rx="6" fill="#fff" stroke="#b45309"/><rect x="410" y="138" width="150" height="20" rx="6" fill="#b45309"/><text x="485" y="153" fill="#fff" text-anchor="middle" font-weight="700">dte_emitidos</text><text x="418" y="174">EstadoSii, Folio, Payload</text></g>
+    <g><rect x="200" y="140" width="160" height="54" rx="6" fill="#fff" stroke="#047857"/><rect x="200" y="140" width="160" height="20" rx="6" fill="#047857"/><text x="280" y="155" fill="#fff" text-anchor="middle" font-weight="700">mesapedidos</text><text x="208" y="176">MesaID, Estado, VentaID</text></g>
+    <g><rect x="600" y="20" width="110" height="56" rx="6" fill="#fff" stroke="#4f46e5"/><rect x="600" y="20" width="110" height="20" rx="6" fill="#4f46e5"/><text x="655" y="35" fill="#fff" text-anchor="middle" font-weight="700">productos</text><text x="606" y="56">Stock, ControlaStock</text></g>
+  </g>
+  <g stroke="#6b7280" stroke-width="1.4" fill="none">
+    <line x1="150" y1="55" x2="200" y2="55"/><line x1="360" y1="45" x2="410" y2="36"/><line x1="360" y1="75" x2="410" y2="100"/><line x1="360" y1="100" x2="410" y2="160"/><line x1="280" y1="140" x2="280" y2="110"/><line x1="560" y1="36" x2="600" y2="46"/>
+  </g>
+</svg>
+<figcaption>Figura 10. Relaciones principales alrededor de una venta (simplificado).</figcaption>
+</figure>
+
+<h3>8.1 Migraciones</h3>
+<ul>
+  <li><code>db/migrations/NNNN_descripcion.sql</code> en orden; nunca se modifica una publicada.</li>
+  <li><b>Instalación nueva:</b> se cargan <code>01_esquema.sql</code> + <code>02_datos_base.sql</code> y todas quedan marcadas como aplicadas.</li>
+  <li><b>Actualización:</b> <code>configurar.php</code> respalda y aplica las que falten, registrándolas en la tabla <code>migraciones</code>.</li>
+</ul>
+<div class="ejemplo">
+  <div class="tit">Ejemplo: migración real 0013 (propina)</div>
+<pre><span class="c">-- db/migrations/0013_propina.sql</span>
+<span class="k">ALTER TABLE</span> ventas <span class="k">ADD COLUMN</span> Propina <span class="k">INT NOT NULL DEFAULT</span> <span class="n">0</span> <span class="k">AFTER</span> MontoTotal;
+
+<span class="k">INSERT IGNORE INTO</span> configuraciones (Clave, Valor, Descripcion) <span class="k">VALUES</span>
+  (<span class="s">'PROPINA_ACTIVA'</span>, <span class="s">'NO'</span>, <span class="s">'Ofrecer propina voluntaria en la pantalla de pago'</span>),
+  (<span class="s">'PROPINA_PORCENTAJE'</span>, <span class="s">'10'</span>, <span class="s">'Porcentaje de propina sugerida'</span>);</pre>
+  <p>Registro real al actualizar un cliente de v4.0.0 a v4.1.0:</p>
+<pre>Migraciones por aplicar: 0013_propina.sql. Respaldando antes...
+  Respaldo OK: minimarket_local_2026-11-13_011353.sql.gz (10 KB)
+  aplicada 0013_propina.sql</pre>
+</div>
+<div class="nota"><b>Lección aprendida:</b> aplicar SQL con el cliente <code>mysql</code> siempre con <code>--default-character-set=utf8mb4</code>. Sin eso, "Garzón" se guardó como "Garz├│n".</div>
+
+<!-- ================================================================ 9 -->
+<h2>9. Seguridad</h2>
+<table>
+  <tr><th style="width: 52%;">Medida</th><th>Dónde</th></tr>
+  <tr><td>Contraseñas con <code>password_hash</code>; sin claves universales</td><td><code>auth.php</code>, <code>usuarios.php</code>, <code>instalar.php</code></td></tr>
+  <tr><td>CSRF en formularios y APIs</td><td><code>auth.php</code></td></tr>
+  <tr><td>Bloqueo por intentos fallidos (login y PIN)</td><td><code>auth.php</code>, <code>api/mesas.php</code></td></tr>
+  <tr><td><code>.htaccess</code>: niega archivos ocultos, SQL, licencias, etc., y carpetas privadas</td><td>raíz, <code>config/</code>, <code>db/</code>, <code>includes/</code>, <code>scripts/</code>, <code>tools/</code>, <code>storage/</code></td></tr>
+  <tr><td>Acceso de red limitado a garzón/cocina; MySQL solo local</td><td><code>licencia.php</code>, <code>configurar.php</code></td></tr>
+  <tr><td>Clave Tributaria cifrada (AES-256-GCM, llave por equipo)</td><td><code>sii/Cifrado.php</code></td></tr>
+  <tr><td>Contraseñas de MySQL aleatorias por instalación</td><td><code>configurar.php</code></td></tr>
+  <tr><td>Licencias firmadas; clave privada fuera del repositorio</td><td><code>licencia.php</code>, <code>tools/licencias/</code></td></tr>
+  <tr><td>Precios y totales recalculados en el servidor</td><td><code>api/registrar_venta.php</code></td></tr>
+  <tr><td>Asistente de instalación solo local y bloqueado al terminar</td><td><code>instalar.php</code></td></tr>
+</table>
+<div class="ejemplo">
+  <div class="tit">Ejemplo: intentos que el sistema rechaza (probados)</div>
+  <table>
+    <tr><th>Intento</th><th>Respuesta del sistema</th></tr>
+    <tr><td>Entrar con la antigua clave "Demo1234"</td><td>Usuario o contraseña incorrectos</td></tr>
+    <tr><td>Enviar una venta sin token CSRF</td><td>Token de seguridad inválido</td></tr>
+    <tr><td>Cobrar dos veces la misma mesa</td><td>La cuenta de esta mesa ya fue cobrada o anulada (sin venta a medias)</td></tr>
+    <tr><td>Dejar propina a crédito</td><td>La propina no se puede dejar a crédito ni pagar con puntos</td></tr>
+    <tr><td>Abrir <code>compras.php</code> con plan Básico</td><td>403 — incluido en el plan Comercio</td></tr>
+  </table>
+</div>
+
+<!-- ================================================================ 10 -->
+<h2>10. Entorno de desarrollo</h2>
+<ol>
+  <li><b>Laragon</b> con Apache, PHP 8.1 y MySQL 8 en <code>C:\laragon</code>.</li>
+  <li>Clonar el repositorio en <code>C:\laragon\www\minimarket-minimal</code>.</li>
+  <li>Copiar <code>.env.example</code> a <code>.env</code> y completar credenciales con <code>DB_NAME=minimarket_local</code>.</li>
+  <li>Crear la base cargando <code>db/instalacion/01_esquema.sql</code> y <code>02_datos_base.sql</code>, o usar el asistente.</li>
+  <li>Licencia de prueba desde el panel para el RUT configurado.</li>
+  <li>Boletas sin emitir boletas reales: Configuración → Boleta Electrónica → <b>Simulador</b>.</li>
+</ol>
+<div class="ejemplo">
+  <div class="tit">Ejemplo: primeros comandos</div>
+<pre><span class="c"># clonar</span>
+git clone https://github.com/fcardenas886/minimarket-pos-local.git C:/laragon/www/minimarket-minimal
+
+<span class="c"># .env (desarrollo)</span>
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_NAME=minimarket_local
+DB_USER=root
+DB_PASS=
+
+<span class="c"># licencia de prueba por terminal (o tools\licencias\abrir_panel.bat)</span>
+php tools/licencias/generar_licencia.php --cliente="Prueba" --rut=76.123.456-0 --plan=comercio --extras=mesas
+
+<span class="c"># recuperar el acceso de un usuario</span>
+php scripts/restablecer_clave.php admin</pre>
+</div>
+
+<!-- ================================================================ 11 -->
+<h2>11. Compilación, versionado y entrega</h2>
+<h3>11.1 Generar el instalador</h3>
+<pre>php instalador/compilar.php
+<span class="c">== Minimarket POS v4.1.0 ==
+Paquete listo en instalador/paquete (142.6 MB sin comprimir)
+Listo: instalador/salida/MinimarketPOS-Setup-4.1.0.exe (24.3 MB)</span></pre>
+
+<h3>11.2 Lista de verificación de una versión nueva</h3>
+<ol>
+  <li>Cambios de tablas: migración nueva, aplicada en desarrollo, y regenerar <code>01_esquema.sql</code> / <code>02_datos_base.sql</code>.</li>
+  <li>Subir <code>APP_VERSION</code> y agregar sus novedades en <code>config/database.php</code> (única fuente de la versión).</li>
+  <li><code>php -l</code>, <code>node --check</code> y pruebas de los flujos tocados.</li>
+  <li>Comprobar que el esquema nuevo carga en una base vacía.</li>
+  <li><code>php instalador/compilar.php</code>.</li>
+  <li>Revisar que el commit no incluya archivos sensibles; commit, etiqueta y push.</li>
+</ol>
+<div class="ejemplo">
+  <div class="tit">Ejemplo: publicar la v4.2.0</div>
+<pre><span class="c">// config/database.php</span>
+define(<span class="s">'APP_VERSION'</span>, <span class="s">'v4.2.0'</span>);
+define(<span class="s">'APP_CHANGELOG'</span>, [ <span class="s">'v4.2.0'</span> =&gt; [ <span class="s">'Descripción de la novedad para el usuario…'</span> ], … ]);
+
+<span class="c"># terminal</span>
+php instalador/compilar.php
+git add -A &amp;&amp; git commit -m <span class="s">"v4.2.0: …"</span>
+git tag -a v4.2.0 -m <span class="s">"Minimarket POS v4.2.0"</span>
+git push origin master &amp;&amp; git push origin v4.2.0</pre>
+</div>
+<h3>11.3 Actualizar a un cliente</h3>
+<p>Se entrega el <code>.exe</code> nuevo y se ejecuta <b>encima</b>. Se conservan base de datos, respaldos, <code>.env</code>, licencia y Clave Tributaria; las migraciones se aplican con respaldo previo.</p>
+
+<!-- ================================================================ 12 -->
+<h2>12. Operación y soporte</h2>
+<table>
+  <tr><th style="width: 32%;">Necesidad</th><th>Cómo</th></tr>
+  <tr><td>Registro de instalación</td><td><code>C:\MinimarketPOS\logs\instalacion.log</code></td></tr>
+  <tr><td>Errores web / PHP / MySQL</td><td><code>logs\apache_error.log</code>, <code>php_error.log</code>, <code>mysql_error.log</code></td></tr>
+  <tr><td>Servicios</td><td><code>services.msc</code> → <code>MinimarketPOS-Web</code>, <code>MinimarketPOS-DB</code></td></tr>
+  <tr><td>Tareas</td><td>Programador de tareas → carpeta <code>MinimarketPOS</code></td></tr>
+  <tr><td>Respaldos</td><td><code>C:\MinimarketPOS\respaldos\</code> (30 días); Inicio → "Respaldar ahora"</td></tr>
+  <tr><td>Cliente olvidó su clave</td><td><code>php\php.exe app\scripts\restablecer_clave.php &lt;usuario&gt;</code></td></tr>
+  <tr><td>Boletas pendientes o con error</td><td>Ventas → "boletas con problemas"; Configuración → Boleta Electrónica</td></tr>
+  <tr><td>Activar / renovar / cambiar plan</td><td>Panel de licencias → el cliente pega en Admin → Licencia</td></tr>
+  <tr><td>Tablets no conectan</td><td>Red de Windows <b>privada</b>, instalado con "acceso de red", usar dirección o QR de Configuración</td></tr>
+</table>
+<figure><img src="img/ventas.jpg" style="width: 78%;"><figcaption>Figura 11. Historial de ventas: indicadores del período y filtros; aquí se ven y reintentan las boletas con problemas.</figcaption></figure>
+<div class="ejemplo">
+  <div class="tit">Ejemplo: diagnóstico guiado — "la boleta no sale"</div>
+  <ol>
+    <li>Ventas → filtro "boletas con problemas": ver el estado y pasar el mouse para leer el motivo.</li>
+    <li><b>Pendiente</b> con "Sin conexión" → revisar internet; se emitirá sola.</li>
+    <li><b>Pendiente</b> con "no autorizada en e-Boleta" → problema de la empresa en el SII (software propio, permisos).</li>
+    <li><b>Revisar</b> → buscar la boleta en eboleta.sii.cl antes de reintentar, para no duplicarla.</li>
+    <li><b>Error</b> → leer el motivo del SII, corregir y "Reintentar".</li>
+  </ol>
+</div>
+
+<!-- ================================================================ 13 -->
+<h2>13. Riesgos conocidos y deuda técnica</h2>
+<table>
+  <tr><th style="width: 22%;">Tema</th><th style="width: 36%;">Riesgo / estado</th><th>Mitigación o siguiente paso</th></tr>
+  <tr><td>e-Boleta no oficial</td><td>El SII puede cambiar su sistema sin aviso.</td><td>Las ventas siguen y las boletas quedan pendientes; actualizar <code>EBoletaCliente.php</code>. Evaluar proveedor oficial o LibreDTE (licencia AGPL a revisar).</td></tr>
+  <tr><td>Software propio certificado</td><td>Esas empresas no pueden usar e-Boleta.</td><td>Segundo método de emisión con certificado y CAF si hay demanda.</td></tr>
+  <tr><td>Código PHP legible</td><td>Puede modificarse en el cliente.</td><td>Licencia ligada al RUT; evaluar ofuscación si hiciera falta.</td></tr>
+  <tr><td>Sin pruebas automatizadas</td><td>Regresiones dependen de pruebas manuales.</td><td>PHPUnit para cola de boletas, licencias, totales y propina.</td></tr>
+  <tr><td>Instalador sin firma</td><td>Aviso de SmartScreen.</td><td>Certificado de firma de código (~100–400 USD/año).</td></tr>
+  <tr><td>MySQL redistribuido</td><td>Más pesado; licenciamiento a revisar.</td><td>Cambiar a MariaDB.</td></tr>
+  <tr><td>Soporte al actualizar</td><td>El instalador aún no exige <code>actualizaciones_hasta</code> vigente.</td><td>Verificación en <code>PrepareToInstall</code>.</td></tr>
+  <tr><td>App Android por <code>http</code></td><td>Se instala con barra del navegador.</td><td>Ajuste de Chrome por equipo o HTTPS local.</td></tr>
+  <tr><td>Propina en pago mixto</td><td>No se separa por medio de pago en reportes.</td><td>Guardar el medio de la propina si se necesita.</td></tr>
+  <tr><td>Datos de desarrollo</td><td>La base de desarrollo tiene datos de prueba.</td><td>Nunca usarla con clientes; el instalador crea una limpia.</td></tr>
+</table>
+
+<!-- ================================================================ 14 -->
+<h2>14. Glosario</h2>
+<table>
+  <tr><th style="width: 22%;">Término</th><th>Significado</th></tr>
+  <tr><td><b>SII</b></td><td>Servicio de Impuestos Internos de Chile.</td></tr>
+  <tr><td><b>e-Boleta</b></td><td>Sistema gratuito del SII para emitir boletas electrónicas (eboleta.sii.cl).</td></tr>
+  <tr><td><b>DTE</b></td><td>Documento Tributario Electrónico (boleta 39, boleta exenta 41, factura 33).</td></tr>
+  <tr><td><b>Folio</b></td><td>Número correlativo que el SII asigna a cada boleta.</td></tr>
+  <tr><td><b>CAF</b></td><td>Código de Autorización de Folios (solo software propio; no aplica a e-Boleta).</td></tr>
+  <tr><td><b>RUT</b></td><td>Rol Único Tributario.</td></tr>
+  <tr><td><b>Fiado</b></td><td>Venta a crédito interno a un cliente de confianza.</td></tr>
+  <tr><td><b>Arqueo</b></td><td>Conteo del dinero de la caja al cerrar el turno.</td></tr>
+  <tr><td><b>Comanda</b></td><td>Pedido que el garzón envía a la cocina.</td></tr>
+  <tr><td><b>Kardex</b></td><td>Registro de cada entrada y salida de stock.</td></tr>
+  <tr><td><b>SigV4</b></td><td>Método de firma de peticiones de AWS (usado por e-Boleta).</td></tr>
+  <tr><td><b>PWA</b></td><td>Aplicación web que se instala en el celular con su ícono.</td></tr>
+  <tr><td><b>Migración</b></td><td>Archivo SQL que cambia la base de forma ordenada y versionada.</td></tr>
+  <tr><td><b>Polling</b></td><td>Consultar al servidor cada cierto tiempo si hay novedades.</td></tr>
+</table>
+
+</body>
+</html>
