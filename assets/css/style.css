@@ -822,11 +822,10 @@ body {
   align-items: flex-start;
   gap: 0.6rem;
   font-size: 0.88rem;
-  color: var(--text-main);
+  color: var(--text-main, #f1f5f9);
   line-height: 1.4;
-  opacity: 0;
-  transform: translateY(4px);
-  transition: opacity 0.35s ease, transform 0.35s ease;
+  opacity: 1;
+  transform: none;
 }
 
 .update-changelog li.is-visible {

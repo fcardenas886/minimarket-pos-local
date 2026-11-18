@@ -40,7 +40,9 @@
         : ['Mejoras de rendimiento, estabilidad y correcciones generales.'];
       items.forEach(function (it) {
         const li = document.createElement('li');
-        li.innerHTML = '<i class="fa-solid fa-circle-check" style="color: var(--success); margin-top: 0.15rem;"></i><span>' + it + '</span>';
+        li.className = 'is-visible';
+        li.style.cssText = 'opacity: 1 !important; transform: none !important; color: #f1f5f9; display: flex; gap: 0.6rem; align-items: flex-start;';
+        li.innerHTML = '<i class="fa-solid fa-circle-check" style="color: var(--success, #10b981); margin-top: 0.15rem; flex-shrink: 0;"></i><span style="color: #f1f5f9;">' + it + '</span>';
         ulNovedades.appendChild(li);
       });
     }

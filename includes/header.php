@@ -137,9 +137,9 @@ $changelogActual = APP_CHANGELOG[APP_VERSION] ?? [];
 
       <div id="updateModalLicenciaAviso" style="display: none; background: rgba(245, 158, 11, 0.15); border: 1px solid #f59e0b; border-radius: 8px; padding: 0.75rem; font-size: 0.85rem; color: var(--text-main); margin-bottom: 1rem; text-align: left;"></div>
 
-      <div class="update-changelog" style="max-height: 220px; overflow-y: auto; margin-bottom: 1.5rem;">
-        <div class="update-changelog__label">Novedades y mejoras</div>
-        <ul id="updateModalNovedades"></ul>
+      <div class="update-changelog" style="max-height: 220px; overflow-y: auto; margin-bottom: 1.5rem; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-dark); border-radius: 12px; padding: 0.9rem 1.1rem; text-align: left;">
+        <div class="update-changelog__label" style="font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 0.6rem;">Novedades y mejoras</div>
+        <ul id="updateModalNovedades" style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem;"></ul>
       </div>
 
       <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
