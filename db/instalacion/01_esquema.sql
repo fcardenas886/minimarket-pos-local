@@ -373,6 +373,8 @@ CREATE TABLE `mesapedidos` (
   `FechaCierre` datetime DEFAULT NULL,
   `UsuarioApertura` int DEFAULT NULL,
   `VentaID` int DEFAULT NULL,
+  `PrecuentaImpresa` tinyint(1) NOT NULL DEFAULT '0',
+  `FechaPrecuenta` datetime DEFAULT NULL,
   PRIMARY KEY (`PedidoID`),
   KEY `idx_mesa_estado` (`MesaID`,`Estado`),
   CONSTRAINT `fk_mesapedidos_mesa` FOREIGN KEY (`MesaID`) REFERENCES `mesas` (`MesaID`)

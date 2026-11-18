@@ -18,10 +18,12 @@ try {
 <title>Garzón · <?= htmlspecialchars($negocio ?: 'Minimarket POS') ?></title>
 <style>
   :root { --bg:#f3f4f8; --card:#fff; --text:#1c2230; --muted:#6b7385; --border:#e1e4ec; --primary:#4f46e5; --primary-text:#fff;
-          --libre:#e8f7ee; --libre-text:#0f6b3f; --ocupada:#fff1e0; --ocupada-text:#8a4b00; --cocina:#fde8e8; --cocina-text:#a12a1f; }
+          --libre:#e8f7ee; --libre-text:#0f6b3f; --ocupada:#fff1e0; --ocupada-text:#8a4b00; --cocina:#fde8e8; --cocina-text:#a12a1f;
+          --precuenta:#fef3c7; --precuenta-text:#92400e; }
   @media (prefers-color-scheme: dark) {
     :root { --bg:#11141b; --card:#1b2029; --text:#e8ebf1; --muted:#9aa3b5; --border:#2c3342; --primary:#818cf8; --primary-text:#11141b;
-            --libre:#143323; --libre-text:#7fe0a9; --ocupada:#3a2a12; --ocupada-text:#f5bf6b; --cocina:#3d1a17; --cocina-text:#f4978e; }
+            --libre:#143323; --libre-text:#7fe0a9; --ocupada:#3a2a12; --ocupada-text:#f5bf6b; --cocina:#3d1a17; --cocina-text:#f4978e;
+            --precuenta:#3d3314; --precuenta-text:#fcd34d; }
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
@@ -37,6 +39,7 @@ try {
   .libre { background: var(--libre); color: var(--libre-text); }
   .ocupada { background: var(--ocupada); color: var(--ocupada-text); }
   .encocina { background: var(--cocina); color: var(--cocina-text); }
+  .precuenta { background: var(--precuenta); color: var(--precuenta-text); }
   .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
   .linea { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); }
   .linea:last-child { border-bottom: 0; }
@@ -157,8 +160,23 @@ try {
         $('zonas').innerHTML = Object.entries(zonas).map(([z, ms]) => `
           <h2>${esc(z)}</h2>
           <div class="grid">${ms.map(m => {
-            const clase = !m.PedidoID ? 'libre' : (+m.EnCocina > 0 ? 'encocina' : 'ocupada');
-            const info = !m.PedidoID ? 'Libre' : (fmt(m.Total) + (+m.EnCocina > 0 ? ' · en cocina' : ''));
+            const esLibre = !m.PedidoID;
+            const esPrecuenta = +m.PrecuentaImpresa > 0;
+            const esCocina = +m.EnCocina > 0;
+            let clase = 'libre';
+            let info = 'Libre';
+            if (!esLibre) {
+              if (esPrecuenta) {
+                clase = 'precuenta';
+                info = '🧾 ' + fmt(m.Total) + (m.MinutosOcupada ? ` · ${m.MinutosOcupada}m` : '');
+              } else if (esCocina) {
+                clase = 'encocina';
+                info = '🔥 ' + fmt(m.Total) + (m.MinutosOcupada ? ` · ${m.MinutosOcupada}m` : '');
+              } else {
+                clase = 'ocupada';
+                info = fmt(m.Total) + (m.MinutosOcupada ? ` · ${m.MinutosOcupada}m` : '');
+              }
+            }
             return `<button class="mesa ${clase}" onclick="abrirMesa(${m.MesaID})"><b>${esc(m.Nombre)}</b><small>${info}</small></button>`;
           }).join('')}</div>`).join('');
       } catch (e) { $('zonas').innerHTML = `<p class="error">${esc(e.message)}</p>`; }
@@ -187,11 +205,76 @@ try {
     async function cargarCuenta() {
       const d = await api('pedido&mesa_id=' + mesaActual);
       $('titulo').textContent = d.mesa.Nombre;
+      const esPrecuenta = +d.mesa.PrecuentaImpresa > 0;
+      const propinaSugerida = Math.round(d.total * 0.1);
+      const totalConPropina = d.total + propinaSugerida;
+
       $('cuentaActual').innerHTML = d.lineas.length
-        ? `<div style="display:flex; justify-content:space-between;"><b>Cuenta de la mesa</b><b>${fmt(d.total)}</b></div>` +
+        ? `<div style="display:flex; justify-content:space-between; align-items:baseline;">
+             <div>
+               <b>Cuenta de la mesa</b>
+               <div class="muted" style="font-size:0.8rem; margin-top:2px;">
+                 ${d.mesa.Garzon ? 'Atiende: ' + esc(d.mesa.Garzon) : ''}
+                 ${d.mesa.MinutosOcupada ? ' · 🕒 ' + d.mesa.MinutosOcupada + ' min' : ''}
+                 ${esPrecuenta ? ' · <span style="color:#d97706; font-weight:bold;">🧾 Pre-cuenta emitida</span>' : ''}
+               </div>
+             </div>
+             <div style="text-align:right;">
+               <b style="font-size:1.15rem;">${fmt(d.total)}</b>
+               <div class="muted" style="font-size:0.75rem;">+10% prop: ${fmt(totalConPropina)}</div>
+             </div>
+           </div>
+           <div style="display:flex; gap:8px; margin:10px 0 6px;">
+             <button type="button" class="chip" onclick="garzonPedirPrecuenta(${mesaActual})" style="font-size:0.82rem; padding:6px 12px; background:var(--precuenta); color:var(--precuenta-text); border-color:#f59e0b;">
+               🧾 Pre-cuenta
+             </button>
+             <button type="button" class="chip" onclick="garzonCambiarMesa(${mesaActual})" style="font-size:0.82rem; padding:6px 12px;">
+               ⇄ Cambiar mesa
+             </button>
+           </div>` +
           d.lineas.map(l => `<div class="linea"><div>${+l.Cantidad} × ${esc(l.Nombre)}${l.Nota ? `<div class="muted">${esc(l.Nota)}</div>` : ''}</div>
             <div class="muted" style="text-align:right;">${l.EstadoCocina === 'Lista' ? '✓ lista' : 'en cocina'}<br>${l.FechaComanda.slice(11, 16)}</div></div>`).join('')
         : '<b>Mesa libre</b><p class="muted" style="margin: 4px 0 0;">Lo que envíes abrirá la cuenta.</p>';
+    }
+
+    async function garzonPedirPrecuenta(mesaID) {
+      try {
+        const d = await api('precuenta&mesa_id=' + mesaID);
+        aviso(`🧾 Pre-cuenta emitida. Consumo: ${fmt(d.total_consumo)} (Total c/propina 10%: ${fmt(d.total_con_propina)})`);
+        await cargarCuenta();
+      } catch (e) {
+        aviso('Error: ' + e.message);
+      }
+    }
+
+    async function garzonCambiarMesa(mesaID) {
+      try {
+        const d = await api('mesas');
+        const libres = d.mesas.filter(m => !m.PedidoID && m.MesaID != mesaID);
+        if (!libres.length) {
+          aviso('No hay mesas libres disponibles para trasladar la cuenta.');
+          return;
+        }
+        const opciones = libres.map((m, i) => `${i + 1}. ${m.Nombre} (${m.Zona})`).join('\n');
+        const seleccion = prompt(`Elige la nueva mesa destino ingresando el número:\n\n${opciones}`);
+        if (!seleccion) return;
+        const idx = parseInt(seleccion) - 1;
+        if (isNaN(idx) || idx < 0 || idx >= libres.length) {
+          aviso('Selección no válida.');
+          return;
+        }
+        const destino = libres[idx];
+        const res = await api('cambiar_mesa', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF },
+          body: JSON.stringify({ origen_mesa_id: mesaID, destino_mesa_id: destino.MesaID })
+        });
+        aviso(res.mensaje || 'Mesa cambiada ✓');
+        mesaActual = destino.MesaID;
+        await cargarCuenta();
+      } catch (e) {
+        aviso('Error: ' + e.message);
+      }
     }
     function filtrar(btn) {
       document.querySelectorAll('.chip').forEach(c => c.classList.remove('on')); btn.classList.add('on');

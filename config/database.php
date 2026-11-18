@@ -1,11 +1,19 @@
 <?php
 // Version de la app: unica fuente de verdad, para que login y footer nunca queden desincronizados.
 // El instalador (instalador/compilar.php) toma la versión de aquí: no se escribe en otro lado.
-define('APP_VERSION', 'v4.2.0');
+define('APP_VERSION', 'v4.3.0');
 
 // Novedades reales por versión, para la pantalla de bienvenida y el módulo "Acerca de".
 // Registra la cronología completa de la evolución del sistema desde su inicio.
 define('APP_CHANGELOG', [
+    'v4.3.0' => [
+        'Centro de Control y Visor de Mesas en Caja POS (F8): consulta rápida de pedidos de mesas, productos en cocina, garzón y tiempos sin vaciar el carrito de caja.',
+        'Emisión e Impresión de Pre-Cuenta Térmica (Ley 20.918): ticket no fiscal en 80mm/58mm con consumo, subtotal y 10% sugerido de propina voluntaria.',
+        'Calculadora de División de Cuentas: desglose equitativo entre 2 y 20 personas con propina proporcional e impresión de comprobante informativo.',
+        'Traslado y Cambio de Mesa: reasignación ágil y segura de pedidos activos a mesas desocupadas desde caja o desde el celular del garzón.',
+        'Semáforo Visual de Mesas y Tiempos: tarjetas enriquecidas con código de colores (Libre, Ocupada, En Cocina y Pre-cuenta) con reloj de minutos transcurridos.',
+        'Agregar Productos a Mesas desde Caja: permite a los cajeros sumar productos y notas a una comanda abierta sin perder los ítems de su venta actual.',
+    ],
     'v4.2.0' => [
         'Ley de Redondeo en Efectivo (Ley N° 20.956): cálculo y desglose automático de diferencias (-$5 a +$4 CLP) en pagos en efectivo en caja POS y comprobantes impresos.',
         'Sistema de Actualizaciones Remotas Automáticas: detección y aplicación silenciosa de nuevas versiones al abrir el programa, sin visitas presenciales.',

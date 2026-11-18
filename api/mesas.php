@@ -117,11 +117,15 @@ try {
         exigirGarzonOCaja();
         $mesas = $pdo->query("
             SELECT m.MesaID, m.Nombre, m.Zona, mp.PedidoID, mp.FechaApertura,
+                   COALESCE(mp.PrecuentaImpresa, 0) AS PrecuentaImpresa, mp.FechaPrecuenta,
+                   COALESCE(u.Nombre, 'Caja') AS Garzon,
+                   CASE WHEN mp.FechaApertura IS NOT NULL THEN TIMESTAMPDIFF(MINUTE, mp.FechaApertura, NOW()) ELSE 0 END AS MinutosOcupada,
                    (SELECT COALESCE(SUM(ROUND(d.Cantidad * d.PrecioUnitario)), 0) FROM mesapedidosdetalle d
                      WHERE d.PedidoID = mp.PedidoID AND d.Anulado = 0) AS Total,
                    (SELECT COUNT(*) FROM comandas c WHERE c.PedidoID = mp.PedidoID AND c.EstadoCocina = 'Pendiente') AS EnCocina
             FROM mesas m
             LEFT JOIN mesapedidos mp ON mp.MesaID = m.MesaID AND mp.Estado = 'Abierta'
+            LEFT JOIN usuarios u ON u.UsuarioID = mp.UsuarioApertura
             WHERE m.Activa = TRUE
             ORDER BY m.Zona, m.Orden, m.MesaID
         ")->fetchAll();
@@ -130,8 +134,16 @@ try {
 
     if ($action === 'pedido') {
         exigirGarzonOCaja();
-        $st = $pdo->prepare("SELECT m.MesaID, m.Nombre, m.Zona, mp.PedidoID FROM mesas m
-            LEFT JOIN mesapedidos mp ON mp.MesaID = m.MesaID AND mp.Estado = 'Abierta' WHERE m.MesaID = :m");
+        $st = $pdo->prepare("
+            SELECT m.MesaID, m.Nombre, m.Zona, mp.PedidoID, mp.FechaApertura,
+                   COALESCE(mp.PrecuentaImpresa, 0) AS PrecuentaImpresa, mp.FechaPrecuenta,
+                   COALESCE(u.Nombre, 'Caja') AS Garzon,
+                   CASE WHEN mp.FechaApertura IS NOT NULL THEN TIMESTAMPDIFF(MINUTE, mp.FechaApertura, NOW()) ELSE 0 END AS MinutosOcupada
+            FROM mesas m
+            LEFT JOIN mesapedidos mp ON mp.MesaID = m.MesaID AND mp.Estado = 'Abierta'
+            LEFT JOIN usuarios u ON u.UsuarioID = mp.UsuarioApertura
+            WHERE m.MesaID = :m
+        ");
         $st->execute([':m' => (int)($_GET['mesa_id'] ?? 0)]);
         $mesa = $st->fetch();
         if (!$mesa) responder(['success' => false, 'error' => 'Mesa no encontrada.'], 404);
@@ -260,6 +272,155 @@ try {
         $st = $pdo->prepare("UPDATE mesapedidos SET Estado = 'Anulada', FechaCierre = NOW() WHERE PedidoID = :p AND Estado = 'Abierta'");
         $st->execute([':p' => (int)(leerJson()['pedido_id'] ?? 0)]);
         responder(['success' => $st->rowCount() > 0, 'error' => $st->rowCount() ? null : 'La cuenta ya no está abierta.']);
+    }
+
+    // ------------------------------------------------------------------ Cambio de mesa
+    if ($action === 'cambiar_mesa') {
+        exigirGarzonOCaja();
+        verifyCsrfApi();
+        $in = leerJson();
+        $origenMesaID = (int)($in['origen_mesa_id'] ?? 0);
+        $destinoMesaID = (int)($in['destino_mesa_id'] ?? 0);
+
+        if ($origenMesaID <= 0 || $destinoMesaID <= 0 || $origenMesaID === $destinoMesaID) {
+            responder(['success' => false, 'error' => 'Mesas de origen y destino no válidas.'], 400);
+        }
+
+        $pdo->beginTransaction();
+
+        $stOri = $pdo->prepare("SELECT MesaID, Nombre FROM mesas WHERE MesaID = :m AND Activa = 1 FOR UPDATE");
+        $stOri->execute([':m' => $origenMesaID]);
+        $mesaOri = $stOri->fetch();
+        if (!$mesaOri) throw new Exception('Mesa de origen no encontrada.');
+
+        $stPed = $pdo->prepare("SELECT PedidoID FROM mesapedidos WHERE MesaID = :m AND Estado = 'Abierta' FOR UPDATE");
+        $stPed->execute([':m' => $origenMesaID]);
+        $pedidoID = (int)$stPed->fetchColumn();
+        if (!$pedidoID) throw new Exception('La mesa de origen no tiene una cuenta abierta.');
+
+        $stDest = $pdo->prepare("SELECT MesaID, Nombre FROM mesas WHERE MesaID = :m AND Activa = 1 FOR UPDATE");
+        $stDest->execute([':m' => $destinoMesaID]);
+        $mesaDest = $stDest->fetch();
+        if (!$mesaDest) throw new Exception('Mesa de destino no encontrada.');
+
+        $stOcupada = $pdo->prepare("SELECT COUNT(*) FROM mesapedidos WHERE MesaID = :m AND Estado = 'Abierta'");
+        $stOcupada->execute([':m' => $destinoMesaID]);
+        if ((int)$stOcupada->fetchColumn() > 0) {
+            throw new Exception("La mesa destino ({$mesaDest['Nombre']}) ya está ocupada. Elige una mesa libre.");
+        }
+
+        $pdo->prepare("UPDATE mesapedidos SET MesaID = :dest WHERE PedidoID = :p")
+            ->execute([':dest' => $destinoMesaID, ':p' => $pedidoID]);
+
+        $pdo->commit();
+        responder([
+            'success' => true,
+            'mensaje' => "Cuenta trasladada de {$mesaOri['Nombre']} a {$mesaDest['Nombre']} con éxito.",
+            'pedido_id' => $pedidoID,
+            'mesa_origen' => $mesaOri['Nombre'],
+            'mesa_destino' => $mesaDest['Nombre']
+        ]);
+    }
+
+    // ------------------------------------------------------------------ Pre-cuenta
+    if ($action === 'precuenta') {
+        exigirGarzonOCaja();
+        $pedidoID = (int)($_GET['pedido_id'] ?? 0);
+        $mesaID = (int)($_GET['mesa_id'] ?? 0);
+
+        if (!$pedidoID && $mesaID) {
+            $st = $pdo->prepare("SELECT PedidoID FROM mesapedidos WHERE MesaID = :m AND Estado = 'Abierta' LIMIT 1");
+            $st->execute([':m' => $mesaID]);
+            $pedidoID = (int)$st->fetchColumn();
+        }
+
+        if (!$pedidoID) responder(['success' => false, 'error' => 'No se encontró una cuenta abierta para esta mesa.'], 404);
+
+        $stInfo = $pdo->prepare("
+            SELECT mp.PedidoID, mp.FechaApertura, mp.PrecuentaImpresa, mp.FechaPrecuenta,
+                   m.MesaID, m.Nombre AS Mesa, m.Zona,
+                   COALESCE(u.Nombre, 'Caja') AS Garzon,
+                   TIMESTAMPDIFF(MINUTE, mp.FechaApertura, NOW()) AS MinutosOcupada
+            FROM mesapedidos mp
+            JOIN mesas m ON m.MesaID = mp.MesaID
+            LEFT JOIN usuarios u ON u.UsuarioID = mp.UsuarioApertura
+            WHERE mp.PedidoID = :p AND mp.Estado = 'Abierta'
+        ");
+        $stInfo->execute([':p' => $pedidoID]);
+        $cab = $stInfo->fetch();
+        if (!$cab) responder(['success' => false, 'error' => 'La cuenta ya fue cobrada o no existe.'], 404);
+
+        $det = detallePedido($pdo, $pedidoID);
+
+        $cfgStmt = $pdo->query("SELECT Clave, Valor FROM configuraciones WHERE Clave IN ('MINIMARKET_NOMBRE', 'MINIMARKET_RUT', 'MINIMARKET_DIRECCION', 'MINIMARKET_TELEFONO', 'PROPINA_PORCENTAJE')");
+        $cfg = [];
+        while ($r = $cfgStmt->fetch(PDO::FETCH_ASSOC)) $cfg[$r['Clave']] = $r['Valor'];
+
+        $porcPropina = max(0, min(30, (int)($cfg['PROPINA_PORCENTAJE'] ?? 10)));
+        $montoPropina = (int)round($det['total'] * ($porcPropina / 100));
+
+        // Marcar que la precuenta fue emitida
+        $pdo->prepare("UPDATE mesapedidos SET PrecuentaImpresa = 1, FechaPrecuenta = NOW() WHERE PedidoID = :p")
+            ->execute([':p' => $pedidoID]);
+
+        responder([
+            'success' => true,
+            'pedido' => $cab,
+            'lineas' => $det['lineas'],
+            'total_consumo' => $det['total'],
+            'porcentaje_propina' => $porcPropina,
+            'propina_sugerida' => $montoPropina,
+            'total_con_propina' => $det['total'] + $montoPropina,
+            'local' => [
+                'nombre' => $cfg['MINIMARKET_NOMBRE'] ?? 'Minimarket POS',
+                'rut' => $cfg['MINIMARKET_RUT'] ?? '',
+                'direccion' => $cfg['MINIMARKET_DIRECCION'] ?? '',
+                'telefono' => $cfg['MINIMARKET_TELEFONO'] ?? ''
+            ],
+            'fecha_impresion' => date('Y-m-d H:i:s')
+        ]);
+    }
+
+    // ------------------------------------------------------------------ Dividir cuenta
+    if ($action === 'dividir_cuenta') {
+        exigirGarzonOCaja();
+        $pedidoID = (int)($_GET['pedido_id'] ?? 0);
+        $partes = max(2, min(20, (int)($_GET['partes'] ?? 2)));
+
+        $det = detallePedido($pdo, $pedidoID);
+        $total = $det['total'];
+        if ($total <= 0) responder(['success' => false, 'error' => 'La cuenta está vacía.'], 400);
+
+        $porcPropina = 10;
+        $stProp = $pdo->query("SELECT Valor FROM configuraciones WHERE Clave = 'PROPINA_PORCENTAJE'");
+        if ($val = $stProp->fetchColumn()) $porcPropina = max(0, min(30, (int)$val));
+
+        $montoBasePorPersona = (int)floor($total / $partes);
+        $resto = $total - ($montoBasePorPersona * $partes);
+
+        $propinaTotal = (int)round($total * ($porcPropina / 100));
+        $propinaPorPersona = (int)round($propinaTotal / $partes);
+
+        $distribucion = [];
+        for ($i = 1; $i <= $partes; $i++) {
+            $base = $montoBasePorPersona + ($i <= $resto ? 1 : 0);
+            $distribucion[] = [
+                'persona' => $i,
+                'consumo' => $base,
+                'propina_sugerida' => $propinaPorPersona,
+                'total_con_propina' => $base + $propinaPorPersona
+            ];
+        }
+
+        responder([
+            'success' => true,
+            'total_consumo' => $total,
+            'partes' => $partes,
+            'porcentaje_propina' => $porcPropina,
+            'propina_total' => $propinaTotal,
+            'total_general_con_propina' => $total + $propinaTotal,
+            'distribucion' => $distribucion
+        ]);
     }
 
     responder(['success' => false, 'error' => 'Acción no válida.'], 400);
