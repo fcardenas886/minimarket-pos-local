@@ -59,7 +59,7 @@ $notasFile = sys_get_temp_dir() . "/release_notes_v$version.txt";
 file_put_contents($notasFile, $notas);
 
 $cmdRelease = sprintf(
-    'gh release create %s %s --title %s --notes-file %s',
+    'gh release create %s %s --title %s --notes-file %s -R fcardenas886/minimarket-pos-local',
     escapeshellarg($tag),
     escapeshellarg($exePath),
     escapeshellarg($titulo),
